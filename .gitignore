@@ -37,3 +37,6 @@ admin/qrs/*
 # Server Temporary Files
 .ftpquota
 .htaccess.phpupgrader.*
+
+# Admin bootstrap (no credentials, must be tracked)
+!admin/config/config.php

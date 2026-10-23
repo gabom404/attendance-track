@@ -7,9 +7,9 @@ $fecha2 = $_POST['rango2'];
 $query = "SELECT e.cod_empleado, e.nombre, ep.nombre_proyecto, GROUP_CONCAT(e.day ORDER BY e.day ASC SEPARATOR '|') AS fechas, GROUP_CONCAT(e.entrada ORDER BY e.day ASC SEPARATOR '|') AS entradas, GROUP_CONCAT(e.salida ORDER BY e.day ASC SEPARATOR '|') AS salidas, GROUP_CONCAT(e.justificacion ORDER BY e.day ASC SEPARATOR '|') AS justificaciones, GROUP_CONCAT(e.justificado_por ORDER BY e.day ASC SEPARATOR '|') AS justificado_por, GROUP_CONCAT(e.notas ORDER BY e.day ASC SEPARATOR '|') AS notas
           FROM empleados e
           LEFT JOIN empleados_proyectos ep ON e.cod_empleado = ep.cod_empleado
-          WHERE e.day BETWEEN '$fecha1' AND '$fecha2'
+          WHERE e.day BETWEEN ? AND ?
           GROUP BY e.cod_empleado, e.nombre, ep.nombre_proyecto";
-$resultado = mysqli_query($conn, $query);
+$resultado = safe_query($conn, $query, [$fecha1, $fecha2]);
 
 function generarColorClaroAleatorio() {
     $r = mt_rand(200, 255); // Componente rojo en el rango de 200-255

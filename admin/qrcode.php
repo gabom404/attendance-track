@@ -27,7 +27,7 @@ $qr_error_correction = 'L'; // corrección de errores: L, M, Q, H
 $qr_margin = 0; // margen del código qr
 
 $pdf->Image("qrs/cccc-01.png", $x = 0, $y = 0, $w = 54, $h = 85, $type = '', $link = '', $align = '', $resize = false, $dpi = 300, $palign = '', $ismask = false, $imgmask = false, $border = 0, $fitbox = false, $hidden = false, $fitonpage = false);
-$query = mysqli_query($conn, 'SELECT id, nombre, cod_empleado, img_empleado, rol FROM planilla WHERE cod_empleado="'.$id.'"');
+$query = safe_query($conn, 'SELECT id, nombre, cod_empleado, img_empleado, rol FROM planilla WHERE cod_empleado=?', [$id]);
 $result = mysqli_fetch_assoc($query);
 
 $image_file = "../".$result['img_empleado']."";

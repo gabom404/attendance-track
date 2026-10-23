@@ -18,14 +18,14 @@
 
 ---
 
-## 📋 Executive Overview (STAR Methodology)
+## 📋 Overview
 
 | Dimension | Implementation Details |
 | :--- | :--- |
 | **Situation** | Industrial field installations, solar farms, and distributed construction worksites faced persistent delays, buddy-punching, and payroll discrepancies arising from manual paper shift logs and fragmented spreadsheets across remote locations. |
 | **Task** | Architect and deliver a centralized, touchless attendance tracking and shift management web platform that operates reliably on standard mobile/tablet webcams and kiosks, accurately logs arrival/departure timings, automatically computes overtime, and generates printable QR identification credentials. |
 | **Action** | <ul><li>Implemented responsive webcam optical scanning utilizing the `html5-qrcode` library with immediate visual avatar verification.</li><li>Developed a dynamic Monday-through-Sunday shift evaluation engine enforcing 15-minute grace tolerance windows and automatic categorization (`Presente`, `Tarde`, `Completo`, `Incompleto`, `H.E NO AUTORIZADA`).</li><li>Engineered an automated PDF credential printing engine using **TCPDF** and **PHP QR Code** to produce dual-sided photo badges.</li><li>Created a headless JSON REST API (`api.php`) enabling seamless integration with external barcode terminals and mobile tablets.</li><li>Organized multi-tier role-based access control (RBAC) separating project site supervisors from executive administrators.</li></ul> |
-| **Result** | <ul><li>**~30% reduction** in manual payroll reconciliation discrepancies and timekeeper errors.</li><li>Reduced shift check-in times to **< 2 seconds per employee**.</li><li>Zero hardware lock-in: runs in any standard web browser with an integrated camera.</li></ul> |
+| **Result** | <ul><li>Attendance, shift compliance and overtime are recorded automatically at check-in/check-out.</li><li>Consolidated PDF reports replace manual timesheet consolidation.</li><li>No hardware lock-in: runs in any standard web browser with a camera.</li></ul> |
 
 ---
 
@@ -307,7 +307,7 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
 define('AUTH_SALT', 'attendancetrack_salt');
-define('ADMIN_SECURITY_KEY', 'AttendanceTrack2024!$');
+define('ADMIN_SECURITY_KEY', 'set-a-long-random-value'); // empty disables the admin override
 ```
 
 > **Safe Defaults**: If `config.php` is omitted, the system automatically falls back to environment variables (`getenv('DB_HOST')`, etc.) or local defaults (`localhost`, `attendancetrack_db`, `root`, `""`).
@@ -345,6 +345,8 @@ This repository has been fully sanitized:
 - **PII Stripping**: All real employee names, photos, government IDs, and medical documents have been removed.
 - **SQL Sanitization**: Production dumps (`dipaldes_*`) have been excluded in favor of clean relational DDL (`schema.sql`) and synthetic demo data (`seeds.sql`).
 - **Brand Cleansing**: All code and visual assets are rebranded to **AttendanceTrack**.
+- **Parameterized Queries**: Every database query that receives external input runs through mysqli prepared statements (`safe_query()` in `includes/db_connect.php`).
+- **No Hardcoded Master Keys**: The admin password override only works when `ADMIN_SECURITY_KEY` is configured.
 
 ---
 

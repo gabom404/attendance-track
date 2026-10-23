@@ -5,9 +5,9 @@
 include("includes/db_connect.php");
 
 if (isset($_GET['id_code'])) {
-    $id_code = mysqli_real_escape_string($conn, trim($_GET['id_code']));
-    $query = "SELECT img_empleado FROM planilla WHERE cod_empleado = '$id_code' LIMIT 1";
-    $resultado = mysqli_query($conn, $query);
+    $id_code = trim($_GET['id_code']);
+    $query = "SELECT img_empleado FROM planilla WHERE cod_empleado = ? LIMIT 1";
+    $resultado = safe_query($conn, $query, [$id_code]);
     
     if ($resultado && mysqli_num_rows($resultado) > 0) {
         $fila = mysqli_fetch_assoc($resultado);

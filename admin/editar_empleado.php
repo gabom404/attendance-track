@@ -46,7 +46,7 @@ include('includes/header.php');
                             include("config/config.php");
                             $id = $_GET['q'];
                             $counter = 0;
-                            $query = mysqli_query($conn, 'SELECT nombre FROM planilla WHERE id = "' . $id . '"');
+                            $query = safe_query($conn, 'SELECT nombre FROM planilla WHERE id = ?', [$id]);
                             while ($row = mysqli_fetch_array($query)) {
                                 echo '
                                     
@@ -62,7 +62,7 @@ include('includes/header.php');
                                 include("config/config.php");
                                 $id = $_GET['q'];
                                 $counter = 0;
-                                $query = mysqli_query($conn, 'SELECT * FROM planilla WHERE id = "' . $id . '"');
+                                $query = safe_query($conn, 'SELECT * FROM planilla WHERE id = ?', [$id]);
                                 while ($row = mysqli_fetch_array($query)) {
                                 ?>
 
@@ -169,7 +169,7 @@ include('includes/header.php');
                                                 </div>
                                             <select name="isadmin" class="form-control">
                                             <?php
-                                            $result = mysqli_query($conn, 'SELECT * FROM users WHERE nombre_empleado = "'.$row['nombre'].'"');
+                                            $result = safe_query($conn, 'SELECT * FROM users WHERE nombre_empleado = ?', [$row['nombre']]);
                                             $nombreOptions = "";
                                             if (mysqli_num_rows($result) > 0) {
                                                 while ($row = mysqli_fetch_assoc($result)) {

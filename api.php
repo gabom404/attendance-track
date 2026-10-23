@@ -27,13 +27,13 @@ if (!isset($_POST["id_code"]) || empty(trim($_POST["id_code"]))) {
     exit;
 }
 
-$cod_empleado = mysqli_real_escape_string($conn, trim($_POST["id_code"]));
+$cod_empleado = trim($_POST["id_code"]);
 $fechaActual  = date("Y-m-d");
 $HoraActual   = date("H:i:s");
-$fecha        = isset($_POST["fecha"]) && !empty($_POST["fecha"]) ? mysqli_real_escape_string($conn, $_POST["fecha"]) : date("Y-m-d H:i:s");
+$fecha        = isset($_POST["fecha"]) && !empty($_POST["fecha"]) ? $_POST["fecha"] : date("Y-m-d H:i:s");
 
 // Verify active employee in master registry
-$sql_emp = mysqli_query($conn, "SELECT * FROM planilla WHERE cod_empleado = '$cod_empleado' AND status = 'Activo' LIMIT 1");
+$sql_emp = safe_query($conn, 'SELECT * FROM planilla WHERE cod_empleado = ? AND status = \'Activo\' LIMIT 1', [$cod_empleado]);
 if (!$sql_emp || mysqli_num_rows($sql_emp) === 0) {
     echo json_encode([
         "status" => "error",
@@ -45,7 +45,7 @@ if (!$sql_emp || mysqli_num_rows($sql_emp) === 0) {
 $emp = mysqli_fetch_assoc($sql_emp);
 
 // Query assigned project
-$sql_proj = mysqli_query($conn, "SELECT nombre_proyecto FROM empleados_proyectos WHERE cod_empleado = '$cod_empleado' LIMIT 1");
+$sql_proj = safe_query($conn, 'SELECT nombre_proyecto FROM empleados_proyectos WHERE cod_empleado = ? LIMIT 1', [$cod_empleado]);
 $nombre_proyecto = ($sql_proj && mysqli_num_rows($sql_proj) > 0) ? mysqli_fetch_assoc($sql_proj)['nombre_proyecto'] : 'General Operations';
 
 // Map day of week to schedule columns
@@ -67,7 +67,7 @@ $scheduled_in  = $emp[$in_col];
 $scheduled_out = $emp[$out_col];
 
 // Check existing attendance for today
-$sql_check = mysqli_query($conn, "SELECT * FROM empleados WHERE cod_empleado = '$cod_empleado' AND day = '$fechaActual' LIMIT 1");
+$sql_check = safe_query($conn, 'SELECT * FROM empleados WHERE cod_empleado = ? AND day = ? LIMIT 1', [$cod_empleado, $fechaActual]);
 
 if ($sql_check && mysqli_num_rows($sql_check) > 0) {
     $record = mysqli_fetch_assoc($sql_check);
@@ -117,20 +117,20 @@ if ($sql_check && mysqli_num_rows($sql_check) > 0) {
     }
 
     $update_query = "UPDATE empleados SET 
-        salida = '$HoraActual', 
-        status_salida = '$status_salida', 
-        status_horas = '$status_horas', 
-        horas_extra = '$horas_extra' 
-        WHERE cod_empleado = '$cod_empleado' AND day = '$fechaActual'";
-    mysqli_query($conn, $update_query);
+        salida = ?, 
+        status_salida = ?, 
+        status_horas = ?, 
+        horas_extra = ? 
+        WHERE cod_empleado = ? AND day = ?";
+    safe_query($conn, $update_query, [$HoraActual, $status_salida, $status_horas, $horas_extra, $cod_empleado, $fechaActual]);
 
     // Synchronize to asistencias if available
-    @mysqli_query($conn, "UPDATE asistencias SET 
-        salida = '$HoraActual', 
-        status_salida = '$status_salida', 
-        status_horas = '$status_horas', 
-        horas_extra = '$horas_extra' 
-        WHERE cod_empleado = '$cod_empleado' AND day = '$fechaActual'");
+    @safe_query($conn, 'UPDATE asistencias SET 
+        salida = ?, 
+        status_salida = ?, 
+        status_horas = ?, 
+        horas_extra = ? 
+        WHERE cod_empleado = ? AND day = ?', [$HoraActual, $status_salida, $status_horas, $horas_extra, $cod_empleado, $fechaActual]);
 
     echo json_encode([
         "status" => "success",
@@ -158,17 +158,17 @@ if ($sql_check && mysqli_num_rows($sql_check) > 0) {
         $status_entrada = "Tarde";
     }
 
-    $emp_nombre = mysqli_real_escape_string($conn, $emp['nombre']);
-    $proj_safe  = mysqli_real_escape_string($conn, $nombre_proyecto);
+    $emp_nombre = $emp['nombre'];
+    $proj_safe  = $nombre_proyecto;
 
     $insert_query = "INSERT INTO empleados 
         (nombre, cod_empleado, day, proyecto, entrada, status_entrada) 
-        VALUES ('$emp_nombre', '$cod_empleado', '$fechaActual', '$proj_safe', '$HoraActual', '$status_entrada')";
-    mysqli_query($conn, $insert_query);
+        VALUES (?, ?, ?, ?, ?, ?)";
+    safe_query($conn, $insert_query, [$emp_nombre, $cod_empleado, $fechaActual, $proj_safe, $HoraActual, $status_entrada]);
 
-    @mysqli_query($conn, "INSERT INTO asistencias 
+    @safe_query($conn, 'INSERT INTO asistencias 
         (nombre, cod_empleado, day, proyecto, entrada, status_entrada) 
-        VALUES ('$emp_nombre', '$cod_empleado', '$fechaActual', '$proj_safe', '$HoraActual', '$status_entrada')");
+        VALUES (?, ?, ?, ?, ?, ?)', [$emp_nombre, $cod_empleado, $fechaActual, $proj_safe, $HoraActual, $status_entrada]);
 
     echo json_encode([
         "status" => "success",

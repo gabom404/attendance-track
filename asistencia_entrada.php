@@ -11,12 +11,12 @@ if (!isset($_POST["id_code"]) || empty(trim($_POST["id_code"]))) {
     exit;
 }
 
-$cod_empleado = mysqli_real_escape_string($conn, trim($_POST["id_code"]));
+$cod_empleado = trim($_POST["id_code"]);
 $fechaActual  = date("Y-m-d");
 $HoraActual   = date("H:i:s");
 
 // Find active employee in master payroll registry
-$sql1 = mysqli_query($conn, "SELECT * FROM planilla WHERE cod_empleado = '$cod_empleado' AND status = 'Activo' LIMIT 1");
+$sql1 = safe_query($conn, 'SELECT * FROM planilla WHERE cod_empleado = ? AND status = \'Activo\' LIMIT 1', [$cod_empleado]);
 if (!$sql1 || mysqli_num_rows($sql1) === 0) {
     header("Location: agregar_entrada.php?q=error");
     exit;
@@ -24,11 +24,11 @@ if (!$sql1 || mysqli_num_rows($sql1) === 0) {
 $result = mysqli_fetch_assoc($sql1);
 
 // Find assigned project
-$sqle = mysqli_query($conn, "SELECT nombre_proyecto FROM empleados_proyectos WHERE cod_empleado = '$cod_empleado' LIMIT 1");
+$sqle = safe_query($conn, 'SELECT nombre_proyecto FROM empleados_proyectos WHERE cod_empleado = ? LIMIT 1', [$cod_empleado]);
 $nombre_proyecto = ($sqle && mysqli_num_rows($sqle) > 0) ? mysqli_fetch_assoc($sqle)['nombre_proyecto'] : 'General';
 
 // Check if attendance already recorded today
-$sql2 = mysqli_query($conn, "SELECT id FROM empleados WHERE cod_empleado = '$cod_empleado' AND day = '$fechaActual' LIMIT 1");
+$sql2 = safe_query($conn, 'SELECT id FROM empleados WHERE cod_empleado = ? AND day = ? LIMIT 1', [$cod_empleado, $fechaActual]);
 if ($sql2 && mysqli_num_rows($sql2) > 0) {
     header("Location: agregar_entrada.php?q=already");
     exit;
@@ -58,16 +58,16 @@ if ($HoraActual <= $hora_gracia) {
     $query_param    = "tarde";
 }
 
-$nombre_emp  = mysqli_real_escape_string($conn, $result['nombre']);
-$nombre_proj = mysqli_real_escape_string($conn, $nombre_proyecto);
+$nombre_emp  = $result['nombre'];
+$nombre_proj = $nombre_proyecto;
 
-mysqli_query($conn, "INSERT INTO empleados 
+safe_query($conn, 'INSERT INTO empleados 
     (nombre, cod_empleado, day, proyecto, entrada, status_entrada) 
-    VALUES ('$nombre_emp', '$cod_empleado', '$fechaActual', '$nombre_proj', '$HoraActual', '$status_entrada')");
+    VALUES (?, ?, ?, ?, ?, ?)', [$nombre_emp, $cod_empleado, $fechaActual, $nombre_proj, $HoraActual, $status_entrada]);
 
-@mysqli_query($conn, "INSERT INTO asistencias 
+@safe_query($conn, 'INSERT INTO asistencias 
     (nombre, cod_empleado, day, proyecto, entrada, status_entrada) 
-    VALUES ('$nombre_emp', '$cod_empleado', '$fechaActual', '$nombre_proj', '$HoraActual', '$status_entrada')");
+    VALUES (?, ?, ?, ?, ?, ?)', [$nombre_emp, $cod_empleado, $fechaActual, $nombre_proj, $HoraActual, $status_entrada]);
 
 header("Location: agregar_entrada.php?q=$query_param");
 exit;

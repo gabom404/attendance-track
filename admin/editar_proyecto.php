@@ -64,7 +64,7 @@ include('includes/header.php');
                                         include("config/config.php");
                                         $counter = 0;
                                         $proyecto = $_GET['q'];
-                                        $select = mysqli_query($conn, 'SELECT nombre_proyecto FROM proyectos WHERE id = "' . $proyecto . '"');
+                                        $select = safe_query($conn, 'SELECT nombre_proyecto FROM proyectos WHERE id = ?', [$proyecto]);
                                         $fetch = mysqli_fetch_assoc($select);
                                         $query = mysqli_query($conn, 'SELECT id, nombre, cod_empleado, img_empleado FROM planilla ');
                                         while ($row = mysqli_fetch_array($query)) {

@@ -75,9 +75,9 @@ error_reporting(0);
                                                         <?php
                                                         include("config/config.php");
                                                         $proyecto = $_GET['proyecto'];
-                                                        $select = mysqli_query($conn, 'SELECT nombre_proyecto FROM proyectos WHERE id = "' . $proyecto . '"');
+                                                        $select = safe_query($conn, 'SELECT nombre_proyecto FROM proyectos WHERE id = ?', [$proyecto]);
                                                         $fetch = mysqli_fetch_assoc($select);
-                                                        $select1 = mysqli_query($conn, "SELECT * FROM empleados_proyectos WHERE nombre_proyecto = '" . $fetch['nombre_proyecto'] . "'");
+                                                        $select1 = safe_query($conn, 'SELECT * FROM empleados_proyectos WHERE nombre_proyecto = ?', [$fetch['nombre_proyecto']]);
                                                         while ($row = mysqli_fetch_assoc($select1)) {
                                                             echo '<option value="' . $row['nombre_empleado'] . '">' . $row['nombre_empleado'] . '</option>';
                                                         }
@@ -151,9 +151,9 @@ error_reporting(0);
                                             include("config/config.php");
                                             $counter = 0;
                                             $proyecto = $_GET['proyecto'];
-                                            $select = mysqli_query($conn, 'SELECT nombre_proyecto FROM proyectos WHERE id = "' . $proyecto . '"');
+                                            $select = safe_query($conn, 'SELECT nombre_proyecto FROM proyectos WHERE id = ?', [$proyecto]);
                                             $fetch = mysqli_fetch_assoc($select);
-                                            $query = mysqli_query($conn, 'SELECT * FROM empleados WHERE proyecto = "' . $fetch['nombre_proyecto'] . '" AND day = "' . $fechaBusqueda.'"');
+                                            $query = safe_query($conn, 'SELECT * FROM empleados WHERE proyecto = ? AND day = ?', [$fetch['nombre_proyecto'], $fechaBusqueda]);
                                             while ($row = mysqli_fetch_array($query)) {
                                                 $counter++;
 

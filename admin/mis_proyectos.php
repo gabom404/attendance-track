@@ -67,7 +67,7 @@ include('includes/header.php');
                                         if ($_SESSION['level'] == '2') {
                                             $query = mysqli_query($conn, 'SELECT id, nombre_proyecto FROM proyectos');
                                         } else {
-                                            $query = mysqli_query($conn, 'SELECT id, nombre_proyecto FROM proyectos WHERE id_encargado = "' . $session . '" OR id_encargado2 = "' . $session . '" OR id_encargado3 = "' . $session . '" OR id_encargado4 = "' . $session . '"');
+                                            $query = safe_query($conn, 'SELECT id, nombre_proyecto FROM proyectos WHERE id_encargado = ? OR id_encargado2 = ? OR id_encargado3 = ? OR id_encargado4 = ?', [$session, $session, $session, $session]);
                                         }
                                         while ($row = mysqli_fetch_array($query)) {
                                             $counter++;

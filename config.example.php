@@ -19,4 +19,5 @@ define('DB_CHARSET', getenv('DB_CHARSET') ?: 'utf8mb4');
 define('AUTH_SALT', getenv('AUTH_SALT') ?: 'attendancetrack_salt');
 
 // Master administration key for administrative password overrides
-define('ADMIN_SECURITY_KEY', getenv('ADMIN_SECURITY_KEY') ?: 'AttendanceTrack2024!$');
+// Set a long random value; leave empty to disable the admin password override.
+define('ADMIN_SECURITY_KEY', getenv('ADMIN_SECURITY_KEY') ?: '');

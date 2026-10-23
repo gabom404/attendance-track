@@ -11,12 +11,12 @@ if (!isset($_POST["id_code"]) || empty(trim($_POST["id_code"]))) {
     exit;
 }
 
-$cod_empleado = mysqli_real_escape_string($conn, trim($_POST["id_code"]));
+$cod_empleado = trim($_POST["id_code"]);
 $fechaActual  = date("Y-m-d");
 $HoraActual   = date("H:i:s");
 
 // Find active employee
-$sql1 = mysqli_query($conn, "SELECT * FROM planilla WHERE cod_empleado = '$cod_empleado' AND status = 'Activo' LIMIT 1");
+$sql1 = safe_query($conn, 'SELECT * FROM planilla WHERE cod_empleado = ? AND status = \'Activo\' LIMIT 1', [$cod_empleado]);
 if (!$sql1 || mysqli_num_rows($sql1) === 0) {
     header("Location: agregar_salida.php?q=error");
     exit;
@@ -24,7 +24,7 @@ if (!$sql1 || mysqli_num_rows($sql1) === 0) {
 $result = mysqli_fetch_assoc($sql1);
 
 // Verify check-in was recorded today
-$sql2 = mysqli_query($conn, "SELECT * FROM empleados WHERE cod_empleado = '$cod_empleado' AND day = '$fechaActual' LIMIT 1");
+$sql2 = safe_query($conn, 'SELECT * FROM empleados WHERE cod_empleado = ? AND day = ? LIMIT 1', [$cod_empleado, $fechaActual]);
 if (!$sql2 || mysqli_num_rows($sql2) === 0) {
     header("Location: agregar_salida.php?q=res");
     exit;
@@ -79,19 +79,19 @@ if ($HoraActual <= $hora_gracia) {
     $query_param   = 'salidatemp';
 }
 
-mysqli_query($conn, "UPDATE empleados SET 
-    salida = '$HoraActual', 
-    status_salida = '$status_salida', 
-    status_horas = '$status_horas', 
-    horas_extra = '$horas_extra' 
-    WHERE cod_empleado = '$cod_empleado' AND day = '$fechaActual'");
+safe_query($conn, 'UPDATE empleados SET 
+    salida = ?, 
+    status_salida = ?, 
+    status_horas = ?, 
+    horas_extra = ? 
+    WHERE cod_empleado = ? AND day = ?', [$HoraActual, $status_salida, $status_horas, $horas_extra, $cod_empleado, $fechaActual]);
 
-@mysqli_query($conn, "UPDATE asistencias SET 
-    salida = '$HoraActual', 
-    status_salida = '$status_salida', 
-    status_horas = '$status_horas', 
-    horas_extra = '$horas_extra' 
-    WHERE cod_empleado = '$cod_empleado' AND day = '$fechaActual'");
+@safe_query($conn, 'UPDATE asistencias SET 
+    salida = ?, 
+    status_salida = ?, 
+    status_horas = ?, 
+    horas_extra = ? 
+    WHERE cod_empleado = ? AND day = ?', [$HoraActual, $status_salida, $status_horas, $horas_extra, $cod_empleado, $fechaActual]);
 
 header("Location: agregar_salida.php?q=$query_param");
 exit;

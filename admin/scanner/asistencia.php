@@ -1,5 +1,5 @@
 <?php
-include("./config/config.php");
+include __DIR__ . "/../config/config.php";
 $cod_empleado = $_POST["id_code"];
 
 $fecha = $_POST["fecha"];
@@ -14,12 +14,12 @@ $fechaActual = date("Y-m-d");
 
     
 
-$sql1 = mysqli_query($conn, "SELECT * FROM planilla WHERE cod_empleado = '".$cod_empleado."' AND status='Activo'");
+$sql1 = safe_query($conn, 'SELECT * FROM planilla WHERE cod_empleado = ? AND status=\'Activo\'', [$cod_empleado]);
 $result = mysqli_fetch_assoc($sql1);
 
 if(mysqli_num_rows($sql1) > 0)
 {
-    $sql2 = mysqli_query($conn, "SELECT * FROM empleados WHERE cod_empleado = '".$cod_empleado."' AND day = '".$fechaActual."'");    
+    $sql2 = safe_query($conn, 'SELECT * FROM empleados WHERE cod_empleado = ? AND day = ?', [$cod_empleado, $fechaActual]);    
     if(mysqli_num_rows($sql2) > 0)
     {
         // $resultid = mysqli_fetch_assoc($sql2);
@@ -27,20 +27,20 @@ if(mysqli_num_rows($sql1) > 0)
         // header("Location: login.php?q=presentesal");
         $horasalida = $result['hora_salida'];
         if($HoraActual  >= $horasalida){
-        $actualizar = mysqli_query($conn, "UPDATE empleados SET salida = '".$HoraActual."', status_salida = 'Completo' WHERE cod_empleado = '".$cod_empleado."' AND day = '".$fechaActual."' ");
+        $actualizar = safe_query($conn, 'UPDATE empleados SET salida = ?, status_salida = \'Completo\' WHERE cod_empleado = ? AND day = ? ', [$HoraActual, $cod_empleado, $fechaActual]);
         header("Location: login.php?q=salida");
         }else{
-        $actualizar = mysqli_query($conn, "UPDATE empleados SET salida = '".$HoraActual."', status_salida = 'Incompleto' WHERE cod_empleado = '".$cod_empleado."' AND day = '".$fechaActual."' ");
+        $actualizar = safe_query($conn, 'UPDATE empleados SET salida = ?, status_salida = \'Incompleto\' WHERE cod_empleado = ? AND day = ? ', [$HoraActual, $cod_empleado, $fechaActual]);
         header("Location: login.php?q=salidatemp");   
         }
 
     }else{
         $horaentrada = $result['hora_entrada'];
         if($HoraActual  <= $horaentrada){
-            $insertar = mysqli_query($conn, 'INSERT INTO empleados (nombre, cod_empleado,  day, entrada, status_entrada) VALUES ("'.$result['nombre'].'","'.$result['cod_empleado'].'","'.$fecha.'","'.$HoraActual.'","Prente")');
+            $insertar = safe_query($conn, 'INSERT INTO empleados (nombre, cod_empleado,  day, entrada, status_entrada) VALUES (?,?,?,?,"Prente")', [$result['nombre'], $result['cod_empleado'], $fecha, $HoraActual]);
             header("Location: login.php?q=presente");
         }else{
-            $insertar = mysqli_query($conn, 'INSERT INTO empleados (nombre, cod_empleado, day, entrada, status_entrada ) VALUES ("'.$result['nombre'].'","'.$result['cod_empleado'].'","'.$fecha.'","'.$HoraActual.'","Tarde")');
+            $insertar = safe_query($conn, 'INSERT INTO empleados (nombre, cod_empleado, day, entrada, status_entrada ) VALUES (?,?,?,?,"Tarde")', [$result['nombre'], $result['cod_empleado'], $fecha, $HoraActual]);
             header("Location: login.php?q=xd");   
         }
     } 

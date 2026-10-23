@@ -3,15 +3,14 @@ include('../config/config.php');
 session_start();
 
 if (isset($_POST['username'])) {
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = mysqli_real_escape_string($conn, $_POST['password']);
+    $username = $_POST['username'];
+    $password = $_POST['password'];
 
     if (empty($password)) {
         echo 'emptypass';
     } else {
 
-        $sql = "SELECT * FROM users WHERE nombre_empleado='$username'";
-        $result = $conn->query($sql);
+        $result = safe_query($conn, 'SELECT * FROM users WHERE nombre_empleado = ?', [$username]);
 
         if ($result->num_rows > 0) {
 
@@ -39,16 +38,16 @@ if (isset($_POST['username'])) {
 }
 
 if (isset($_POST['change_pass_btn'])) {
-    $new = mysqli_real_escape_string($conn, $_POST['new_pass']);
-    $admin = mysqli_real_escape_string($conn, $_POST['admin_pass']);
+    $new = $_POST['new_pass'];
+    $admin = $_POST['admin_pass'];
     $id = $_POST['id'];
 
-    $valid_admin_key = defined('ADMIN_SECURITY_KEY') ? ADMIN_SECURITY_KEY : 'AttendanceTrack2024!$';
-    if ($admin === $valid_admin_key || $admin === 'Admin2024!$' || $admin === 'AttendanceTrack2024!$') {
+    $valid_admin_key = defined('ADMIN_SECURITY_KEY') ? (string) ADMIN_SECURITY_KEY : '';
+    if ($valid_admin_key !== '' && hash_equals($valid_admin_key, (string) $admin)) {
         $salt1 = defined('AUTH_SALT') ? AUTH_SALT : "attendancetrack_salt";
         $hash1 = password_hash($new . $salt1, PASSWORD_BCRYPT);
 
-        $update = mysqli_query($conn, 'UPDATE users  SET password = "' . $hash1 . '" WHERE id="' . $id . '"');
+        $update = safe_query($conn, 'UPDATE users  SET password = ? WHERE id=?', [$hash1, $id]);
 
         if ($update) {
             mysqli_close($conn);
@@ -69,12 +68,12 @@ if (isset($_POST['change_pass_btn'])) {
 
 if (isset($_POST['editar_empleado'])) {
     $id = $_POST["id"];
-    $nombre_empleado = mysqli_real_escape_string($conn, $_POST['nombre_empleado']);
-    $nombre_old = mysqli_real_escape_string($conn, $_POST['nombre_old']);
-    $rol_empleado = mysqli_real_escape_string($conn, $_POST['rol_empleado']);
-    $dui_empleado = mysqli_real_escape_string($conn, $_POST['dui_empleado']);
-    $tel_empleado = mysqli_real_escape_string($conn, $_POST['tel_empleado']);
-    $cod_empleado = mysqli_real_escape_string($conn, $_POST['cod_empleado']);
+    $nombre_empleado = $_POST['nombre_empleado'];
+    $nombre_old = $_POST['nombre_old'];
+    $rol_empleado = $_POST['rol_empleado'];
+    $dui_empleado = $_POST['dui_empleado'];
+    $tel_empleado = $_POST['tel_empleado'];
+    $cod_empleado = $_POST['cod_empleado'];
     $lunes_entrada = $_POST["lunes_entrada"];
     $lunes_salida = $_POST["lunes_salida"];
     $martes_entrada = $_POST["martes_entrada"];
@@ -96,12 +95,12 @@ if (isset($_POST['editar_empleado'])) {
     $hora_viernes_24h = date("H:i", strtotime($viernes_salida));
     $hora_sabado_24h = date("H:i", strtotime($sabado_salida));
     $hora_domingo_24h = date("H:i", strtotime($domingo_salida));
-    $tipo_empleado = mysqli_real_escape_string($conn, $_POST['tipo_empleado']);
+    $tipo_empleado = $_POST['tipo_empleado'];
 
     if ($_FILES["img_empleado"]["name"] != '') {
         $empleado_img = img();
-        $update = mysqli_query($conn, 'UPDATE planilla SET nombre = "' . $nombre_empleado . '", cod_empleado="' . $cod_empleado . '", lunes_entrada = "' . $lunes_entrada . '", lunes_salida = "' . $hora_lunes_24h . '", martes_entrada = "' . $martes_entrada . '", martes_salida = "' . $hora_martes_24h . '", miercoles_entrada = "' . $miercoles_entrada . '", miercoles_salida = "' . $hora_miercoles_24h . '", jueves_entrada = "' . $jueves_entrada . '", jueves_salida = "' . $hora_jueves_24h . '", viernes_entrada = "' . $viernes_entrada . '", viernes_salida = "' . $hora_viernes_24h . '", sabado_entrada = "' . $sabado_entrada . '", sabado_salida = "' . $hora_sabado_24h . '", domingo_entrada = "' . $domingo_entrada . '", domingo_salida = "' . $hora_domingo_24h . '", status="Activo", img_empleado = "' . $empleado_img . '", rol="' . $rol_empleado . '", tipo="' . $tipo_empleado . '", tel="' . $tel_empleado . '", dui="' . $dui_empleado . '" WHERE id="' . $id . '"');
-        $update2 = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_empleado = "' . $nombre_empleado . '", cod_empleado = "' . $cod_empleado . '", img = "' . $empleado_img . '" WHERE nombre_empleado= "' . $nombre_old . '"');
+        $update = safe_query($conn, 'UPDATE planilla SET nombre = ?, cod_empleado=?, lunes_entrada = ?, lunes_salida = ?, martes_entrada = ?, martes_salida = ?, miercoles_entrada = ?, miercoles_salida = ?, jueves_entrada = ?, jueves_salida = ?, viernes_entrada = ?, viernes_salida = ?, sabado_entrada = ?, sabado_salida = ?, domingo_entrada = ?, domingo_salida = ?, status="Activo", img_empleado = ?, rol=?, tipo=?, tel=?, dui=? WHERE id=?', [$nombre_empleado, $cod_empleado, $lunes_entrada, $hora_lunes_24h, $martes_entrada, $hora_martes_24h, $miercoles_entrada, $hora_miercoles_24h, $jueves_entrada, $hora_jueves_24h, $viernes_entrada, $hora_viernes_24h, $sabado_entrada, $hora_sabado_24h, $domingo_entrada, $hora_domingo_24h, $empleado_img, $rol_empleado, $tipo_empleado, $tel_empleado, $dui_empleado, $id]);
+        $update2 = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_empleado = ?, cod_empleado = ?, img = ? WHERE nombre_empleado= ?', [$nombre_empleado, $cod_empleado, $empleado_img, $nombre_old]);
 
         if ($update) {
             echo 'success';
@@ -109,8 +108,8 @@ if (isset($_POST['editar_empleado'])) {
             echo 'error';
         }
     } else {
-        $update = mysqli_query($conn, 'UPDATE planilla SET nombre = "' . $nombre_empleado . '", cod_empleado="' . $cod_empleado . '", lunes_entrada = "' . $lunes_entrada . '", lunes_salida = "' . $hora_lunes_24h . '", martes_entrada = "' . $martes_entrada . '", martes_salida = "' . $hora_martes_24h . '", miercoles_entrada = "' . $miercoles_entrada . '", miercoles_salida = "' . $hora_miercoles_24h . '", jueves_entrada = "' . $jueves_entrada . '", jueves_salida = "' . $hora_jueves_24h . '", viernes_entrada = "' . $viernes_entrada . '", viernes_salida = "' . $hora_viernes_24h . '", sabado_entrada = "' . $sabado_entrada . '", sabado_salida = "' . $hora_sabado_24h . '", domingo_entrada = "' . $domingo_entrada . '", domingo_salida = "' . $hora_domingo_24h . '", status="Activo", rol="' . $rol_empleado . '", tipo="' . $tipo_empleado . '", tel="' . $tel_empleado . '", dui="' . $dui_empleado . '" WHERE id="' . $id . '"');
-        $update2 = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_empleado = "' . $nombre_empleado . '", cod_empleado = "' . $cod_empleado . '" WHERE nombre_empleado="' . $nombre_old . '"');
+        $update = safe_query($conn, 'UPDATE planilla SET nombre = ?, cod_empleado=?, lunes_entrada = ?, lunes_salida = ?, martes_entrada = ?, martes_salida = ?, miercoles_entrada = ?, miercoles_salida = ?, jueves_entrada = ?, jueves_salida = ?, viernes_entrada = ?, viernes_salida = ?, sabado_entrada = ?, sabado_salida = ?, domingo_entrada = ?, domingo_salida = ?, status="Activo", rol=?, tipo=?, tel=?, dui=? WHERE id=?', [$nombre_empleado, $cod_empleado, $lunes_entrada, $hora_lunes_24h, $martes_entrada, $hora_martes_24h, $miercoles_entrada, $hora_miercoles_24h, $jueves_entrada, $hora_jueves_24h, $viernes_entrada, $hora_viernes_24h, $sabado_entrada, $hora_sabado_24h, $domingo_entrada, $hora_domingo_24h, $rol_empleado, $tipo_empleado, $tel_empleado, $dui_empleado, $id]);
+        $update2 = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_empleado = ?, cod_empleado = ? WHERE nombre_empleado=?', [$nombre_empleado, $cod_empleado, $nombre_old]);
 
         if ($update) {
             echo 'success';
@@ -123,19 +122,19 @@ if (isset($_POST['editar_empleado'])) {
     $is_admin = $_POST['isadmin'];
 
     if ($is_admin == 'Quit') {
-        $select = mysqli_query($conn, 'SELECT * FROM proyectos WHERE nombre_encargado = "' . $nombre_empleado1 . '"  OR nombre_encargado2 = "' . $nombre_empleado1 . '" OR nombre_encargado3 = "' . $nombre_empleado1 . '" OR nombre_encargado4 = "' . $nombre_empleado1 . '"');
+        $select = safe_query($conn, 'SELECT * FROM proyectos WHERE nombre_encargado = ?  OR nombre_encargado2 = ? OR nombre_encargado3 = ? OR nombre_encargado4 = ?', [$nombre_empleado1, $nombre_empleado1, $nombre_empleado1, $nombre_empleado1]);
         if (mysqli_num_rows($select) > 0) {
             header("Location: ../planilla.php?admin=error_quit");
         } else {
-            $delete_user = mysqli_query($conn,  'DELETE FROM users WHERE nombre_empleado = "' . $nombre_empleado1 . '"');
-            $delete_user = mysqli_query($conn,  'DELETE FROM users WHERE nombre_empleado = "' . $nombre_empleado1 . '"');
+            $delete_user = safe_query($conn, 'DELETE FROM users WHERE nombre_empleado = ?', [$nombre_empleado1]);
+            $delete_user = safe_query($conn, 'DELETE FROM users WHERE nombre_empleado = ?', [$nombre_empleado1]);
         }
 
         if ($delete_user) {
             header("Location: ../planilla.php?admin=success_quit");
         }
     } elseif ($is_admin == 'Convert') {
-        $insert = mysqli_query($conn, 'INSERT INTO users (nombre_empleado, nivel) VALUES ("' . $nombre_empleado1 . '", "1")');
+        $insert = safe_query($conn, 'INSERT INTO users (nombre_empleado, nivel) VALUES (?, "1")', [$nombre_empleado1]);
         header("Location: ../planilla.php?admin=success_encargado");
     } else {
         header("Location: ../planilla.php?edit=success");
@@ -147,11 +146,11 @@ if (isset($_POST['editar_empleado'])) {
 
 
 if (isset($_POST['agregar_empleado'])) {
-    $nombre_empleado = mysqli_real_escape_string($conn, $_POST['nombre_empleado']);
-    $rol_empleado = mysqli_real_escape_string($conn, $_POST['rol_empleado']);
-    $dui_empleado = mysqli_real_escape_string($conn, $_POST['dui_empleado']);
-    $tel_empleado = mysqli_real_escape_string($conn, $_POST['tel_empleado']);
-    $cod_empleado = mysqli_real_escape_string($conn, $_POST['cod_empleado']);
+    $nombre_empleado = $_POST['nombre_empleado'];
+    $rol_empleado = $_POST['rol_empleado'];
+    $dui_empleado = $_POST['dui_empleado'];
+    $tel_empleado = $_POST['tel_empleado'];
+    $cod_empleado = $_POST['cod_empleado'];
     $lunes_entrada = $_POST["lunes_entrada"];
     $lunes_salida = $_POST["lunes_salida"];
 
@@ -174,7 +173,7 @@ if (isset($_POST['agregar_empleado'])) {
     $domingo_salida = $_POST["domingo_salida"];
 
 
-    $tipo_empleado = mysqli_real_escape_string($conn, $_POST['tipo_empleado']);
+    $tipo_empleado = $_POST['tipo_empleado'];
 
     $hora_lunes_24h = date("H:i", strtotime($lunes_salida));
     $hora_martes_24h = date("H:i", strtotime($martes_salida));
@@ -187,7 +186,7 @@ if (isset($_POST['agregar_empleado'])) {
 
     if (isset($_POST['admin'])) {
 
-        $pass = mysqli_real_escape_string($conn, $_POST['pass']);
+        $pass = $_POST['pass'];
         $salt = defined('AUTH_SALT') ? AUTH_SALT : "attendancetrack_salt";
         $hash = password_hash($pass . $salt, PASSWORD_BCRYPT);
         $nivel = 1;
@@ -196,15 +195,15 @@ if (isset($_POST['agregar_empleado'])) {
         if ($_FILES["img_empleado"]["name"] != '') {
 
             $empleado_img = img();
-            $insert = mysqli_query($conn, 'INSERT INTO planilla (nombre, cod_empleado, lunes_entrada, lunes_salida, martes_entrada, martes_salida, miercoles_entrada, miercoles_salida, jueves_entrada, jueves_salida, viernes_entrada, viernes_salida, sabado_entrada, sabado_salida, domingo_entrada, domingo_salida, status, img_empleado, tipo, rol, tel, dui) 
-            VALUES ("' . $nombre_empleado . '","' . $cod_empleado . '",
-            "' . $lunes_entrada . '", "' . $hora_lunes_24h . '","' . $martes_entrada . '", "' . $hora_martes_24h . '",
-            "' . $miercoles_entrada . '", "' . $hora_miercoles_24h . '",
-            "' . $jueves_entrada . '", "' . $hora_jueves_24h . '",
-            "' . $viernes_entrada . '", "' . $hora_viernes_24h . '",
-            "' . $sabado_entrada . '", "' . $hora_sabado_24h . '",
-            "' . $domingo_entrada . '", "' . $hora_domingo_24h . '", "Activo","' . $empleado_img . '","' . $tipo_empleado . '","' . $rol_empleado . '","' . $tel_empleado . '","' . $dui_empleado . '")');
-            $insert2 = mysqli_query($conn, 'INSERT INTO users (nombre_empleado, password, salt, nivel) VALUES ("' . $nombre_empleado . '", "' . $hash . '",  "' . $salt . '","' . $nivel . '")');
+            $insert = safe_query($conn, 'INSERT INTO planilla (nombre, cod_empleado, lunes_entrada, lunes_salida, martes_entrada, martes_salida, miercoles_entrada, miercoles_salida, jueves_entrada, jueves_salida, viernes_entrada, viernes_salida, sabado_entrada, sabado_salida, domingo_entrada, domingo_salida, status, img_empleado, tipo, rol, tel, dui) 
+            VALUES (?,?,
+            ?, ?,?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?, "Activo",?,?,?,?,?)', [$nombre_empleado, $cod_empleado, $lunes_entrada, $hora_lunes_24h, $martes_entrada, $hora_martes_24h, $miercoles_entrada, $hora_miercoles_24h, $jueves_entrada, $hora_jueves_24h, $viernes_entrada, $hora_viernes_24h, $sabado_entrada, $hora_sabado_24h, $domingo_entrada, $hora_domingo_24h, $empleado_img, $tipo_empleado, $rol_empleado, $tel_empleado, $dui_empleado]);
+            $insert2 = safe_query($conn, 'INSERT INTO users (nombre_empleado, password, salt, nivel) VALUES (?, ?,  ?,?)', [$nombre_empleado, $hash, $salt, $nivel]);
 
             if ($insert && $insert2) {
                 mysqli_close($conn);
@@ -215,14 +214,14 @@ if (isset($_POST['agregar_empleado'])) {
             }
         } else {
             $empleado_img = 'images/picture.png';
-            $insert = mysqli_query($conn, 'INSERT INTO planilla (nombre, cod_empleado, lunes_entrada, lunes_salida, martes_entrada, martes_salida, miercoles_entrada, miercoles_salida, jueves_entrada, jueves_salida, viernes_entrada, viernes_salida, sabado_entrada, sabado_salida, domingo_entrada, domingo_salida, status, img_empleado, tipo, rol, tel, dui) VALUES ("' . $nombre_empleado . '","' . $cod_empleado . '",
-            "' . $lunes_entrada . '", "' . $hora_lunes_24h . '","' . $martes_entrada . '", "' . $hora_martes_24h . '",
-            "' . $miercoles_entrada . '", "' . $hora_miercoles_24h . '",
-            "' . $jueves_entrada . '", "' . $hora_jueves_24h . '",
-            "' . $viernes_entrada . '", "' . $hora_viernes_24h . '",
-            "' . $sabado_entrada . '", "' . $hora_sabado_24h . '",
-            "' . $domingo_entrada . '", "' . $hora_domingo_24h . '", "Activo","' . $empleado_img . '","' . $tipo_empleado . '","' . $rol_empleado . '","' . $tel_empleado . '","' . $dui_empleado . '")');
-            $insert2 = mysqli_query($conn, 'INSERT INTO users (nombre_empleado, password, salt, nivel) VALUES ("' . $nombre_empleado . '", "' . $hash . '",  "' . $salt . '","' . $nivel . '")');
+            $insert = safe_query($conn, 'INSERT INTO planilla (nombre, cod_empleado, lunes_entrada, lunes_salida, martes_entrada, martes_salida, miercoles_entrada, miercoles_salida, jueves_entrada, jueves_salida, viernes_entrada, viernes_salida, sabado_entrada, sabado_salida, domingo_entrada, domingo_salida, status, img_empleado, tipo, rol, tel, dui) VALUES (?,?,
+            ?, ?,?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?, "Activo",?,?,?,?,?)', [$nombre_empleado, $cod_empleado, $lunes_entrada, $hora_lunes_24h, $martes_entrada, $hora_martes_24h, $miercoles_entrada, $hora_miercoles_24h, $jueves_entrada, $hora_jueves_24h, $viernes_entrada, $hora_viernes_24h, $sabado_entrada, $hora_sabado_24h, $domingo_entrada, $hora_domingo_24h, $empleado_img, $tipo_empleado, $rol_empleado, $tel_empleado, $dui_empleado]);
+            $insert2 = safe_query($conn, 'INSERT INTO users (nombre_empleado, password, salt, nivel) VALUES (?, ?,  ?,?)', [$nombre_empleado, $hash, $salt, $nivel]);
 
             if ($insert && $insert2) {
                 mysqli_close($conn);
@@ -236,15 +235,15 @@ if (isset($_POST['agregar_empleado'])) {
         if ($_FILES["img_empleado"]["name"] != '') {
 
             $empleado_img = img();
-            $insert = mysqli_query($conn, 'INSERT INTO planilla (nombre, cod_empleado, lunes_entrada, lunes_salida, martes_entrada, martes_salida, miercoles_entrada, miercoles_salida, jueves_entrada, jueves_salida, viernes_entrada, viernes_salida, sabado_entrada, sabado_salida, domingo_entrada, domingo_salida, status, img_empleado, tipo, rol, tel, dui) VALUES ("' . $nombre_empleado . '","' . $cod_empleado . '",
-            "' . $lunes_entrada . '", "' . $hora_lunes_24h . '","' . $martes_entrada . '", "' . $hora_martes_24h . '",
-            "' . $miercoles_entrada . '", "' . $hora_miercoles_24h . '",
-            "' . $jueves_entrada . '", "' . $hora_jueves_24h . '",
-            "' . $viernes_entrada . '", "' . $hora_viernes_24h . '",
-            "' . $sabado_entrada . '", "' . $hora_sabado_24h . '",
-            "' . $domingo_entrada . '", "' . $hora_domingo_24h . '", "Activo","' . $empleado_img . '","' . $tipo_empleado . '","' . $rol_empleado . '","' . $tel_empleado . '","' . $dui_empleado . '")');
+            $insert = safe_query($conn, 'INSERT INTO planilla (nombre, cod_empleado, lunes_entrada, lunes_salida, martes_entrada, martes_salida, miercoles_entrada, miercoles_salida, jueves_entrada, jueves_salida, viernes_entrada, viernes_salida, sabado_entrada, sabado_salida, domingo_entrada, domingo_salida, status, img_empleado, tipo, rol, tel, dui) VALUES (?,?,
+            ?, ?,?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?, "Activo",?,?,?,?,?)', [$nombre_empleado, $cod_empleado, $lunes_entrada, $hora_lunes_24h, $martes_entrada, $hora_martes_24h, $miercoles_entrada, $hora_miercoles_24h, $jueves_entrada, $hora_jueves_24h, $viernes_entrada, $hora_viernes_24h, $sabado_entrada, $hora_sabado_24h, $domingo_entrada, $hora_domingo_24h, $empleado_img, $tipo_empleado, $rol_empleado, $tel_empleado, $dui_empleado]);
 
-            $insert2 = mysqli_query($conn, 'INSERT INTO empleados_proyectos(nombre_empleado,nombre_proyecto, cod_empleado,img) VALUES ("' . $nombre_empleado . '","", "' . $cod_empleado . '", "' . $empleado_img . '")');
+            $insert2 = safe_query($conn, 'INSERT INTO empleados_proyectos(nombre_empleado,nombre_proyecto, cod_empleado,img) VALUES (?,"", ?, ?)', [$nombre_empleado, $cod_empleado, $empleado_img]);
 
             if ($insert && $insert2) {
                 mysqli_close($conn);
@@ -255,15 +254,15 @@ if (isset($_POST['agregar_empleado'])) {
             }
         } else {
             $empleado_img = 'images/picture.png';
-            $insert = mysqli_query($conn, 'INSERT INTO planilla (nombre, cod_empleado, lunes_entrada, lunes_salida, martes_entrada, martes_salida, miercoles_entrada, miercoles_salida, jueves_entrada, jueves_salida, viernes_entrada, viernes_salida, sabado_entrada, sabado_salida, domingo_entrada, domingo_salida, status, img_empleado, tipo, rol, tel, dui) VALUES ("' . $nombre_empleado . '","' . $cod_empleado . '",
-            "' . $lunes_entrada . '", "' . $hora_lunes_24h . '","' . $martes_entrada . '", "' . $hora_martes_24h . '",
-            "' . $miercoles_entrada . '", "' . $hora_miercoles_24h . '",
-            "' . $jueves_entrada . '", "' . $hora_jueves_24h . '",
-            "' . $viernes_entrada . '", "' . $hora_viernes_24h . '",
-            "' . $sabado_entrada . '", "' . $hora_sabado_24h . '",
-            "' . $domingo_entrada . '", "' . $hora_domingo_24h . '", "Activo","' . $empleado_img . '","' . $tipo_empleado . '","' . $rol_empleado . '","' . $tel_empleado . '","' . $dui_empleado . '")');
+            $insert = safe_query($conn, 'INSERT INTO planilla (nombre, cod_empleado, lunes_entrada, lunes_salida, martes_entrada, martes_salida, miercoles_entrada, miercoles_salida, jueves_entrada, jueves_salida, viernes_entrada, viernes_salida, sabado_entrada, sabado_salida, domingo_entrada, domingo_salida, status, img_empleado, tipo, rol, tel, dui) VALUES (?,?,
+            ?, ?,?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?, "Activo",?,?,?,?,?)', [$nombre_empleado, $cod_empleado, $lunes_entrada, $hora_lunes_24h, $martes_entrada, $hora_martes_24h, $miercoles_entrada, $hora_miercoles_24h, $jueves_entrada, $hora_jueves_24h, $viernes_entrada, $hora_viernes_24h, $sabado_entrada, $hora_sabado_24h, $domingo_entrada, $hora_domingo_24h, $empleado_img, $tipo_empleado, $rol_empleado, $tel_empleado, $dui_empleado]);
 
-            $insert2 = mysqli_query($conn, 'INSERT INTO empleados_proyectos(nombre_empleado,nombre_proyecto, cod_empleado,img) VALUES ("' . $nombre_empleado . '","", "' . $cod_empleado . '", "' . $empleado_img . '")');
+            $insert2 = safe_query($conn, 'INSERT INTO empleados_proyectos(nombre_empleado,nombre_proyecto, cod_empleado,img) VALUES (?,"", ?, ?)', [$nombre_empleado, $cod_empleado, $empleado_img]);
 
 
             if ($insert && $insert2) {
@@ -286,13 +285,13 @@ if (isset($_POST['agregar'])) {
 
     $fechaActual = date("Y-m-d");
 
-    $check = mysqli_query($conn, 'SELECT * FROM empleados WHERE nombre = "' . $nombre_empleado . '" AND day = "' . $fechaActual . '"');
+    $check = safe_query($conn, 'SELECT * FROM empleados WHERE nombre = ? AND day = ?', [$nombre_empleado, $fechaActual]);
     $queryu = mysqli_query($conn, 'SELECT * FROM planilla WHERE nombre');
     if ($nombre_empleado != "" && $entrada != ""  &&  $entrada_status != "") {
         if (mysqli_num_rows($check) > 0) {
-            $update = mysqli_query($conn, 'UPDATE empleados SET salida = "' . $salida . '", status_salida = "' . $salida_status . '" WHERE nombre = "' . $nombre_empleado . '" AND day = "' . $fechaActual . '"');
+            $update = safe_query($conn, 'UPDATE empleados SET salida = ?, status_salida = ? WHERE nombre = ? AND day = ?', [$salida, $salida_status, $nombre_empleado, $fechaActual]);
         } else {
-            $query = mysqli_query($conn, 'INSERT INTO empleados (nombre,day, entrada, status_entrada) VALUES ("' . $nombre_empleado . '", "' . $fechaActual . '","' . $entrada . '","' . $entrada_status . '")');
+            $query = safe_query($conn, 'INSERT INTO empleados (nombre,day, entrada, status_entrada) VALUES (?, ?,?,?)', [$nombre_empleado, $fechaActual, $entrada, $entrada_status]);
             if ($query) {
                 header("Location: ../agregar.php");
             }
@@ -308,14 +307,14 @@ if (isset($_POST['agregar_salida'])) {
 
     $fechaActual = date("Y-m-d");
 
-    $check = mysqli_query($conn, 'SELECT * FROM empleados WHERE nombre = "' . $nombre_empleado . '" AND day = "' . $fechaActual . '"');
+    $check = safe_query($conn, 'SELECT * FROM empleados WHERE nombre = ? AND day = ?', [$nombre_empleado, $fechaActual]);
     $queryu = mysqli_query($conn, 'SELECT * FROM planilla WHERE nombre');
     if ($nombre_empleado != "" && $salida != ""  &&  $salida_status != "") {
         if (mysqli_num_rows($check) > 0) {
-            $update = mysqli_query($conn, 'UPDATE empleados SET salida = "' . $salida . '", status_salida = "' . $salida_status . '" WHERE nombre = "' . $nombre_empleado . '" AND day = "' . $fechaActual . '"');
+            $update = safe_query($conn, 'UPDATE empleados SET salida = ?, status_salida = ? WHERE nombre = ? AND day = ?', [$salida, $salida_status, $nombre_empleado, $fechaActual]);
             header("Location: ../agregar.php");
         } else {
-            $query = mysqli_query($conn, 'INSERT INTO empleados (nombre,day, entrada, status_entrada) VALUES ("' . $nombre_empleado . '", "' . $fechaActual . '","' . $entrada . '","' . $entrada_status . '")');
+            $query = safe_query($conn, 'INSERT INTO empleados (nombre,day, entrada, status_entrada) VALUES (?, ?,?,?)', [$nombre_empleado, $fechaActual, $entrada, $entrada_status]);
             if ($query) {
                 header("Location: ../agregar.php");
             }
@@ -327,16 +326,16 @@ if (isset($_POST['agregar_salida'])) {
 
 
 if (isset($_POST['agregar_encargado'])) {
-    $nombre_encargado = mysqli_real_escape_string($conn, $_POST['nombre_encargado']);
-    $dui_encargado = mysqli_real_escape_string($conn, $_POST['dui_encargado']);
-    $tel_encargado = mysqli_real_escape_string($conn, $_POST['tel_encargado']);
-    $pwd_encargado = mysqli_real_escape_string($conn, $_POST['pwd_encargado']);
+    $nombre_encargado = $_POST['nombre_encargado'];
+    $dui_encargado = $_POST['dui_encargado'];
+    $tel_encargado = $_POST['tel_encargado'];
+    $pwd_encargado = $_POST['pwd_encargado'];
 
     $salt = defined('AUTH_SALT') ? AUTH_SALT : "attendancetrack_salt";
     $hash = password_hash($pwd_encargado . $salt, PASSWORD_BCRYPT);
     $nivel_encargado = 2;
 
-    $insert = mysqli_query($conn, 'INSERT INTO users (nombre_empleado, password, salt, nivel) VALUES ("' . $nombre_encargado . '", "' . $hash . '",  "' . $salt . '","' . $nivel_encargado . '")');
+    $insert = safe_query($conn, 'INSERT INTO users (nombre_empleado, password, salt, nivel) VALUES (?, ?,  ?,?)', [$nombre_encargado, $hash, $salt, $nivel_encargado]);
 
     if ($insert) {
         mysqli_close($conn);
@@ -351,26 +350,26 @@ if (isset($_POST['agregar_encargado'])) {
 
 
 if (isset($_POST['agregar_proyecto'])) {
-    $nombre_proyecto = mysqli_real_escape_string($conn, $_POST['nombre_empleado']);
-    $encargado = mysqli_real_escape_string($conn, $_POST['encargado']);
-    $encargado2 = mysqli_real_escape_string($conn, $_POST['encargado2']);
-    $encargado3 = mysqli_real_escape_string($conn, $_POST['encargado3']);
-    $encargado4 = mysqli_real_escape_string($conn, $_POST['encargado4']);
+    $nombre_proyecto = $_POST['nombre_empleado'];
+    $encargado = $_POST['encargado'];
+    $encargado2 = $_POST['encargado2'];
+    $encargado3 = $_POST['encargado3'];
+    $encargado4 = $_POST['encargado4'];
 
-    $check = mysqli_query($conn, 'SELECT * FROM users WHERE nombre_empleado = "' . $encargado . '" ');
+    $check = safe_query($conn, 'SELECT * FROM users WHERE nombre_empleado = ? ', [$encargado]);
     $check_fetch = mysqli_fetch_assoc($check);
-    $check2 = mysqli_query($conn, 'SELECT * FROM users WHERE nombre_empleado = "' . $encargado2 . '" ');
+    $check2 = safe_query($conn, 'SELECT * FROM users WHERE nombre_empleado = ? ', [$encargado2]);
     $check_fetch2 = mysqli_fetch_assoc($check2);
-    $check3 = mysqli_query($conn, 'SELECT * FROM users WHERE nombre_empleado = "' . $encargado3 . '" ');
+    $check3 = safe_query($conn, 'SELECT * FROM users WHERE nombre_empleado = ? ', [$encargado3]);
     $check_fetch3 = mysqli_fetch_assoc($check3);
-    $check4 = mysqli_query($conn, 'SELECT * FROM users WHERE nombre_empleado = "' . $encargado4 . '" ');
+    $check4 = safe_query($conn, 'SELECT * FROM users WHERE nombre_empleado = ? ', [$encargado4]);
     $check_fetch4 = mysqli_fetch_assoc($check4);
 
-    $insert = mysqli_query($conn, 'INSERT INTO proyectos (nombre_proyecto, id_encargado, nombre_encargado, id_encargado2, nombre_encargado2, id_encargado3, nombre_encargado3,  id_encargado4, nombre_encargado4) VALUES ("' . $nombre_proyecto . '","' . $check_fetch['id'] . '","' . $check_fetch['nombre_empleado'] . '","' . $check_fetch2['id'] . '","' . $check_fetch2['nombre_empleado'] . '","' . $check_fetch3['id'] . '","' . $check_fetch3['nombre_empleado'] . '","' . $check_fetch4['id'] . '","' . $check_fetch4['nombre_empleado'] . '")');
+    $insert = safe_query($conn, 'INSERT INTO proyectos (nombre_proyecto, id_encargado, nombre_encargado, id_encargado2, nombre_encargado2, id_encargado3, nombre_encargado3,  id_encargado4, nombre_encargado4) VALUES (?,?,?,?,?,?,?,?,?)', [$nombre_proyecto, $check_fetch['id'], $check_fetch['nombre_empleado'], $check_fetch2['id'], $check_fetch2['nombre_empleado'], $check_fetch3['id'], $check_fetch3['nombre_empleado'], $check_fetch4['id'], $check_fetch4['nombre_empleado']]);
 
     if (mysqli_num_rows($check) > 0 && mysqli_num_rows($check2) > 0 && mysqli_num_rows($check3) > 0 && mysqli_num_rows($check4) > 0) {
         if ($insert) {
-            $select = mysqli_query($conn, 'SELECT id FROM proyectos WHERE nombre_proyecto = "' . $nombre_proyecto . '"');
+            $select = safe_query($conn, 'SELECT id FROM proyectos WHERE nombre_proyecto = ?', [$nombre_proyecto]);
             if ($select) {
                 $fetch = mysqli_fetch_assoc($select);
                 mysqli_close($conn);
@@ -392,10 +391,10 @@ if (isset($_POST['agregar_proyecto'])) {
         $salt = defined('AUTH_SALT') ? AUTH_SALT : "attendancetrack_salt";
         $hash = password_hash($password . $salt, PASSWORD_BCRYPT);
 
-        $insert_encargado = mysqli_query($conn, 'INSERT INTO users (nombre_empleado, password, salt, nivel) VALUES ("' . $encargado . '", "' . $hash . '", "' . $salt . '", "' . $nivel . '")');
+        $insert_encargado = safe_query($conn, 'INSERT INTO users (nombre_empleado, password, salt, nivel) VALUES (?, ?, ?, ?)', [$encargado, $hash, $salt, $nivel]);
 
         if ($insert & $insert_encargado) {
-            $select = mysqli_query($conn, 'SELECT id FROM proyectos WHERE nombre_proyecto = "' . $nombre_proyecto . '"');
+            $select = safe_query($conn, 'SELECT id FROM proyectos WHERE nombre_proyecto = ?', [$nombre_proyecto]);
             if ($select) {
                 $fetch = mysqli_fetch_assoc($select);
                 mysqli_close($conn);
@@ -418,34 +417,34 @@ if (isset($_POST['agregar_proyecto'])) {
 
 
 if (isset($_POST["eliminar_de_proyecto"])) {
-    $proyecto = mysqli_real_escape_string($conn, $_POST['eliminar_de_proyecto']);
-    $cod = mysqli_real_escape_string($conn, $_POST['empleado']);
+    $proyecto = $_POST['eliminar_de_proyecto'];
+    $cod = $_POST['empleado'];
 
-    $check_empty = mysqli_query($conn, 'SELECT * FROM empleados_proyectos WHERE cod_empleado = "' . $cod . '" AND nombre_proyecto != ""');
+    $check_empty = safe_query($conn, 'SELECT * FROM empleados_proyectos WHERE cod_empleado = ? AND nombre_proyecto != ""', [$cod]);
     if (mysqli_num_rows($check_empty) > 1) {
-        $select = mysqli_query($conn, 'DELETE FROM empleados_proyectos WHERE nombre_proyecto = "' . $proyecto . '" AND cod_empleado = "' . $cod . '"');
+        $select = safe_query($conn, 'DELETE FROM empleados_proyectos WHERE nombre_proyecto = ? AND cod_empleado = ?', [$proyecto, $cod]);
     } else {
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "" WHERE cod_empleado = "' . $cod . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "" WHERE cod_empleado = ?', [$cod]);
     }
 }
 
 if (isset($_POST["en_proyecto"])) {
-    $proyecto = mysqli_real_escape_string($conn, $_POST['en_proyecto']);
-    $cod = mysqli_real_escape_string($conn, $_POST['empleado']);
+    $proyecto = $_POST['en_proyecto'];
+    $cod = $_POST['empleado'];
 
-    $check_empty = mysqli_query($conn, 'SELECT * FROM empleados_proyectos WHERE cod_empleado = "' . $cod . '" AND nombre_proyecto = ""');
+    $check_empty = safe_query($conn, 'SELECT * FROM empleados_proyectos WHERE cod_empleado = ? AND nombre_proyecto = ""', [$cod]);
 
     if (mysqli_num_rows($check_empty) > 0) {
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $proyecto . '" WHERE cod_empleado = "' . $cod . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE cod_empleado = ?', [$proyecto, $cod]);
     } else {
-        $select = mysqli_query($conn, 'SELECT * FROM empleados_proyectos WHERE nombre_proyecto = "' . $proyecto . '" AND cod_empleado = "' . $cod . '"');
+        $select = safe_query($conn, 'SELECT * FROM empleados_proyectos WHERE nombre_proyecto = ? AND cod_empleado = ?', [$proyecto, $cod]);
         $num_rows = mysqli_num_rows($select);
         if ($num_rows > 0) {
         } else {
-            $select = mysqli_query($conn, 'SELECT * FROM planilla WHERE cod_empleado = "' . $cod . '"');
+            $select = safe_query($conn, 'SELECT * FROM planilla WHERE cod_empleado = ?', [$cod]);
             $row = mysqli_fetch_assoc($select);
 
-            $query = mysqli_query($conn, 'INSERT INTO empleados_proyectos(nombre_empleado,nombre_proyecto, cod_empleado,img) VALUES ("' . $row['nombre'] . '","' . $proyecto . '", "' . $cod . '", "' . $row['img_empleado'] . '")');
+            $query = safe_query($conn, 'INSERT INTO empleados_proyectos(nombre_empleado,nombre_proyecto, cod_empleado,img) VALUES (?,?, ?, ?)', [$row['nombre'], $proyecto, $cod, $row['img_empleado']]);
         }
     }
 }
@@ -454,14 +453,14 @@ if (isset($_POST["en_proyecto"])) {
 if (isset($_POST["eliminar_encargado"])) {
     $id = $_POST['encargado_id'];
 
-    $select = mysqli_query($conn, 'SELECT * FROM proyectos WHERE id_encargado = "' . $id . '"  OR id_encargado2 = "' . $id . '" OR id_encargado3 = "' . $id . '" OR id_encargado4 = "' . $id . '"');
+    $select = safe_query($conn, 'SELECT * FROM proyectos WHERE id_encargado = ?  OR id_encargado2 = ? OR id_encargado3 = ? OR id_encargado4 = ?', [$id, $id, $id, $id]);
 
     if (mysqli_num_rows($select) > 0) {
         mysqli_close($conn);
         header("Location: ../users.php?delete=on");
         exit();
     } else {
-        $delete = mysqli_query($conn, 'DELETE FROM users WHERE id = "' . $id . '" ');
+        $delete = safe_query($conn, 'DELETE FROM users WHERE id = ? ', [$id]);
 
         if ($delete) {
             mysqli_close($conn);
@@ -479,11 +478,11 @@ if (isset($_POST["eliminar_encargado"])) {
 if (isset($_POST["eliminar_empleado"])) {
     $id = $_POST['empleado_id'];
 
-    $select = mysqli_query($conn, 'SELECT * FROM planilla WHERE id = "' . $id . '"');
+    $select = safe_query($conn, 'SELECT * FROM planilla WHERE id = ?', [$id]);
     $fetch = mysqli_fetch_assoc($select);
 
-    $delete = mysqli_query($conn, 'DELETE FROM planilla WHERE id = "' . $id . '" ');
-    $delete2 = mysqli_query($conn, 'DELETE FROM empleados_proyectos WHERE nombre_empleado = "' . $fetch['nombre'] . '" ');
+    $delete = safe_query($conn, 'DELETE FROM planilla WHERE id = ? ', [$id]);
+    $delete2 = safe_query($conn, 'DELETE FROM empleados_proyectos WHERE nombre_empleado = ? ', [$fetch['nombre']]);
 
 
     if ($delete && $delete2) {
@@ -499,7 +498,7 @@ if (isset($_POST["eliminar_empleado"])) {
 
 if (isset($_POST["eliminar_proyecto"])) {
     $id = $_POST['proyecto_id'];
-    $select = mysqli_query($conn, 'SELECT * FROM proyectos WHERE id = "' . $id . '"');
+    $select = safe_query($conn, 'SELECT * FROM proyectos WHERE id = ?', [$id]);
     $fetch = mysqli_fetch_assoc($select);
     $verify = mysqli_query($conn, 'SELECT nombre_empleado, COUNT(*) cantidad FROM empleados_proyectos GROUP BY nombre_empleado HAVING COUNT(*) > 1');
     $cantidad_empleados = array();
@@ -508,9 +507,9 @@ if (isset($_POST["eliminar_proyecto"])) {
     }
     if (!empty($cantidad_empleados)) {
         foreach ($cantidad_empleados as $nombre_empleado) {
-            $delete1 = mysqli_query($conn, 'DELETE FROM empleados_proyectos WHERE nombre_empleado = "' . $nombre_empleado . '" AND nombre_proyecto = "' . $fetch['nombre_proyecto'] . '"');
+            $delete1 = safe_query($conn, 'DELETE FROM empleados_proyectos WHERE nombre_empleado = ? AND nombre_proyecto = ?', [$nombre_empleado, $fetch['nombre_proyecto']]);
         }
-        $delete = mysqli_query($conn, 'DELETE FROM proyectos WHERE id = "' . $id . '" ');
+        $delete = safe_query($conn, 'DELETE FROM proyectos WHERE id = ? ', [$id]);
         if ($delete || $delete1) {
             mysqli_close($conn);
             header("Location: ../proyectos.php?delete=success");
@@ -521,8 +520,8 @@ if (isset($_POST["eliminar_proyecto"])) {
             exit();
         }
     } else {
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "" WHERE nombre_proyecto = "' . $fetch['nombre_proyecto'] . '" ');
-        $delete = mysqli_query($conn, 'DELETE FROM proyectos WHERE id = "' . $id . '" ');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "" WHERE nombre_proyecto = ? ', [$fetch['nombre_proyecto']]);
+        $delete = safe_query($conn, 'DELETE FROM proyectos WHERE id = ? ', [$id]);
         if ($update && $delete) {
             mysqli_close($conn);
             header("Location: ../proyectos.php?delete=success");
@@ -559,20 +558,20 @@ if (isset($_POST["eliminar_proyecto"])) {
 
 if (isset($_POST["editar_proyecto"])) {
     $id = $_POST['proyecto_id'];
-    $nombre_proyecto = mysqli_real_escape_string($conn, $_POST['nombre_proyecto']);
-    $encargado = mysqli_real_escape_string($conn, $_POST['encargado']);
-    $encargado2 = mysqli_real_escape_string($conn, $_POST['encargado2']);
-    $encargado3 = mysqli_real_escape_string($conn, $_POST['encargado3']);
-    $encargado4 = mysqli_real_escape_string($conn, $_POST['encargado4']);
-    $proyecto_old = mysqli_real_escape_string($conn, $_POST['proyecto_old']);
+    $nombre_proyecto = $_POST['nombre_proyecto'];
+    $encargado = $_POST['encargado'];
+    $encargado2 = $_POST['encargado2'];
+    $encargado3 = $_POST['encargado3'];
+    $encargado4 = $_POST['encargado4'];
+    $proyecto_old = $_POST['proyecto_old'];
 
-    $select = mysqli_query($conn, 'SELECT * FROM proyectos WHERE id = "' . $id . '"');
+    $select = safe_query($conn, 'SELECT * FROM proyectos WHERE id = ?', [$id]);
     $fetch = mysqli_fetch_assoc($select);
 
     //Encargado 1
     if ($encargado == $fetch['nombre_encargado'] || $encargado == "empty") {
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE nombre_proyecto = "' . $proyecto_old . '"');
-        $update2 = mysqli_query($conn, 'UPDATE proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE id = "' . $id . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE nombre_proyecto = ?', [$nombre_proyecto, $proyecto_old]);
+        $update2 = safe_query($conn, 'UPDATE proyectos SET nombre_proyecto = ? WHERE id = ?', [$nombre_proyecto, $id]);
 
         if ($update && $update2) {
             header("Location: ../proyectos.php?edit=success");
@@ -580,11 +579,11 @@ if (isset($_POST["editar_proyecto"])) {
             header("Location: ../proyectos.php?edit=error");
         }
     } else {
-        $select = mysqli_query($conn, 'SELECT id FROM users WHERE nombre_empleado = "' . $encargado . '"');
+        $select = safe_query($conn, 'SELECT id FROM users WHERE nombre_empleado = ?', [$encargado]);
         $fetch = mysqli_fetch_assoc($select);
 
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE nombre_proyecto = "' . $proyecto_old . '"');
-        $update = mysqli_query($conn, 'UPDATE proyectos SET nombre_proyecto = "' . $nombre_proyecto . '", id_encargado = "' . $fetch['id'] . '", nombre_encargado = "' . $encargado . '" WHERE id = "' . $id . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE nombre_proyecto = ?', [$nombre_proyecto, $proyecto_old]);
+        $update = safe_query($conn, 'UPDATE proyectos SET nombre_proyecto = ?, id_encargado = ?, nombre_encargado = ? WHERE id = ?', [$nombre_proyecto, $fetch['id'], $encargado, $id]);
 
         if ($update) {
             header("Location: ../proyectos.php?edit=success");
@@ -595,8 +594,8 @@ if (isset($_POST["editar_proyecto"])) {
 
     //Encargado 2
     if ($encargado2 == $fetch['nombre_encargado2'] || $encargado2 == "empty") {
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE nombre_proyecto = "' . $proyecto_old . '"');
-        $update2 = mysqli_query($conn, 'UPDATE proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE id = "' . $id . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE nombre_proyecto = ?', [$nombre_proyecto, $proyecto_old]);
+        $update2 = safe_query($conn, 'UPDATE proyectos SET nombre_proyecto = ? WHERE id = ?', [$nombre_proyecto, $id]);
 
         if ($update && $update2) {
             header("Location: ../proyectos.php?edit=success");
@@ -604,11 +603,11 @@ if (isset($_POST["editar_proyecto"])) {
             header("Location: ../proyectos.php?edit=error");
         }
     } else {
-        $select2 = mysqli_query($conn, 'SELECT id FROM users WHERE nombre_empleado = "' . $encargado2 . '"');
+        $select2 = safe_query($conn, 'SELECT id FROM users WHERE nombre_empleado = ?', [$encargado2]);
         $fetch2 = mysqli_fetch_assoc($select2);
 
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE nombre_proyecto = "' . $proyecto_old . '"');
-        $update = mysqli_query($conn, 'UPDATE proyectos SET nombre_proyecto = "' . $nombre_proyecto . '", id_encargado2 = "' . $fetch2['id'] . '", nombre_encargado2 = "' . $encargado2 . '" WHERE id = "' . $id . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE nombre_proyecto = ?', [$nombre_proyecto, $proyecto_old]);
+        $update = safe_query($conn, 'UPDATE proyectos SET nombre_proyecto = ?, id_encargado2 = ?, nombre_encargado2 = ? WHERE id = ?', [$nombre_proyecto, $fetch2['id'], $encargado2, $id]);
 
         if ($update) {
             header("Location: ../proyectos.php?edit=success");
@@ -620,8 +619,8 @@ if (isset($_POST["editar_proyecto"])) {
 
     //Encargado 3
     if ($encargado3 == $fetch['nombre_encargado3'] || $encargado3 == "empty") {
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE nombre_proyecto = "' . $proyecto_old . '"');
-        $update2 = mysqli_query($conn, 'UPDATE proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE id = "' . $id . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE nombre_proyecto = ?', [$nombre_proyecto, $proyecto_old]);
+        $update2 = safe_query($conn, 'UPDATE proyectos SET nombre_proyecto = ? WHERE id = ?', [$nombre_proyecto, $id]);
 
         if ($update && $update2) {
             header("Location: ../proyectos.php?edit=success");
@@ -629,11 +628,11 @@ if (isset($_POST["editar_proyecto"])) {
             header("Location: ../proyectos.php?edit=error");
         }
     } else {
-        $select2 = mysqli_query($conn, 'SELECT id FROM users WHERE nombre_empleado = "' . $encargado3 . '"');
+        $select2 = safe_query($conn, 'SELECT id FROM users WHERE nombre_empleado = ?', [$encargado3]);
         $fetch2 = mysqli_fetch_assoc($select2);
 
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE nombre_proyecto = "' . $proyecto_old . '"');
-        $update = mysqli_query($conn, 'UPDATE proyectos SET nombre_proyecto = "' . $nombre_proyecto . '", id_encargado3 = "' . $fetch2['id'] . '", nombre_encargado3 = "' . $encargado3 . '" WHERE id = "' . $id . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE nombre_proyecto = ?', [$nombre_proyecto, $proyecto_old]);
+        $update = safe_query($conn, 'UPDATE proyectos SET nombre_proyecto = ?, id_encargado3 = ?, nombre_encargado3 = ? WHERE id = ?', [$nombre_proyecto, $fetch2['id'], $encargado3, $id]);
 
         if ($update) {
             header("Location: ../proyectos.php?edit=success");
@@ -645,8 +644,8 @@ if (isset($_POST["editar_proyecto"])) {
 
     //Encargado 4
     if ($encargado4 == $fetch['nombre_encargado4'] || $encargado4 == "empty") {
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE nombre_proyecto = "' . $proyecto_old . '"');
-        $update2 = mysqli_query($conn, 'UPDATE proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE id = "' . $id . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE nombre_proyecto = ?', [$nombre_proyecto, $proyecto_old]);
+        $update2 = safe_query($conn, 'UPDATE proyectos SET nombre_proyecto = ? WHERE id = ?', [$nombre_proyecto, $id]);
 
         if ($update && $update2) {
             header("Location: ../proyectos.php?edit=success");
@@ -654,11 +653,11 @@ if (isset($_POST["editar_proyecto"])) {
             header("Location: ../proyectos.php?edit=error");
         }
     } else {
-        $select2 = mysqli_query($conn, 'SELECT id FROM users WHERE nombre_empleado = "' . $encargado4 . '"');
+        $select2 = safe_query($conn, 'SELECT id FROM users WHERE nombre_empleado = ?', [$encargado4]);
         $fetch2 = mysqli_fetch_assoc($select2);
 
-        $update = mysqli_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = "' . $nombre_proyecto . '" WHERE nombre_proyecto = "' . $proyecto_old . '"');
-        $update = mysqli_query($conn, 'UPDATE proyectos SET nombre_proyecto = "' . $nombre_proyecto . '", id_encargado4 = "' . $fetch2['id'] . '", nombre_encargado4 = "' . $encargado4 . '" WHERE id = "' . $id . '"');
+        $update = safe_query($conn, 'UPDATE empleados_proyectos SET nombre_proyecto = ? WHERE nombre_proyecto = ?', [$nombre_proyecto, $proyecto_old]);
+        $update = safe_query($conn, 'UPDATE proyectos SET nombre_proyecto = ?, id_encargado4 = ?, nombre_encargado4 = ? WHERE id = ?', [$nombre_proyecto, $fetch2['id'], $encargado4, $id]);
 
         if ($update) {
             header("Location: ../proyectos.php?edit=success");
@@ -674,7 +673,7 @@ if (isset($_POST["autorizar"])) {
     $fechaActual = date("Y-m-d");
     $id = $_POST["id"];
     // Actualizar el estado de las horas
-    $update = mysqli_query($conn, 'UPDATE empleados SET status_horas = "H.E AUTORIZADA" WHERE id = "' . $id . '"');
+    $update = safe_query($conn, 'UPDATE empleados SET status_horas = "H.E AUTORIZADA" WHERE id = ?', [$id]);
     if ($update) {
         mysqli_close($conn);
         header("Location: ../edit_asistencia.php?edit=ok");
@@ -688,9 +687,9 @@ if (isset($_POST["autorizar"])) {
 
 if (isset($_POST['agregar_ausencias'])) {
     $proyecto = $_POST['proyecto'];
-    $select = mysqli_query($conn, 'SELECT nombre_proyecto FROM proyectos WHERE id = "' . $proyecto . '"');
+    $select = safe_query($conn, 'SELECT nombre_proyecto FROM proyectos WHERE id = ?', [$proyecto]);
     $fetch = mysqli_fetch_assoc($select);
-    $select1 = mysqli_query($conn, "SELECT * FROM empleados_proyectos WHERE nombre_proyecto = '" . $fetch['nombre_proyecto'] . "'");
+    $select1 = safe_query($conn, 'SELECT * FROM empleados_proyectos WHERE nombre_proyecto = ?', [$fetch['nombre_proyecto']]);
     $fetch1 = mysqli_fetch_assoc($select1);
     date_default_timezone_set('America/El_Salvador');
     $fechaActual = date("Y-m-d");
@@ -701,14 +700,14 @@ if (isset($_POST['agregar_ausencias'])) {
                 header("Location: ../edit_asistencia.php?proyecto=$proyecto");
             } else {
                 $empleado_img = img2();
-                $insertar = mysqli_query($conn, 'INSERT INTO empleados (nombre, cod_empleado, day, proyecto, status_entrada, status_salida,justificacion, justificado_por, img, notas) VALUES ("' . $_POST["nombre"] . '","' . $fetch1['cod_empleado'] . '","' . $fechaActual . '","' . $fetch['nombre_proyecto'] . '","' . $_POST['ausencia'] . '","' . $_POST['ausencia'] . '","' . $_POST['ausencia'] . '","' . $_SESSION['nombre'] . '","' . $empleado_img . '","' . $_POST["notas"] . '")');
+                $insertar = safe_query($conn, 'INSERT INTO empleados (nombre, cod_empleado, day, proyecto, status_entrada, status_salida,justificacion, justificado_por, img, notas) VALUES (?,?,?,?,?,?,?,?,?,?)', [$_POST["nombre"], $fetch1['cod_empleado'], $fechaActual, $fetch['nombre_proyecto'], $_POST['ausencia'], $_POST['ausencia'], $_POST['ausencia'], $_SESSION['nombre'], $empleado_img, $_POST["notas"]]);
                 header("Location: ../edit_asistencia.php?proyecto=$proyecto");
             }
         } else {
             if ($_POST["nombre"] == "" ||  $_POST["ausencia"] == "") {
                 header("Location: ../edit_asistencia.php?proyecto=$proyecto");
             } else {
-                $insertar = mysqli_query($conn, 'INSERT INTO empleados (nombre, cod_empleado, day, proyecto, status_entrada, status_salida,justificacion, justificado_por, notas) VALUES ("' . $_POST["nombre"] . '","' . $fetch1['cod_empleado'] . '","' . $fechaActual . '","' . $fetch['nombre_proyecto'] . '","' . $_POST['ausencia'] . '","' . $_POST['ausencia'] . '","' . $_POST['ausencia'] . '","' . $_SESSION['nombre'] . '","' . $_POST["notas"] . '")');
+                $insertar = safe_query($conn, 'INSERT INTO empleados (nombre, cod_empleado, day, proyecto, status_entrada, status_salida,justificacion, justificado_por, notas) VALUES (?,?,?,?,?,?,?,?,?)', [$_POST["nombre"], $fetch1['cod_empleado'], $fechaActual, $fetch['nombre_proyecto'], $_POST['ausencia'], $_POST['ausencia'], $_POST['ausencia'], $_SESSION['nombre'], $_POST["notas"]]);
                 header("Location: ../edit_asistencia.php?proyecto=$proyecto");
             }
         }
@@ -716,7 +715,7 @@ if (isset($_POST['agregar_ausencias'])) {
         if ($_POST["nombre"] == "" || $_POST["ausencia"] == "") {
             header("Location: ../edit_asistencia.php?proyecto=$proyecto");
         } else {
-            $insertar = mysqli_query($conn, 'INSERT INTO empleados (nombre, cod_empleado, day, proyecto, status_entrada, status_salida,justificacion, justificado_por, notas) VALUES ("' . $_POST["nombre"] . '","' . $fetch1['cod_empleado'] . '","' . $fechaActual . '","' . $fetch['nombre_proyecto'] . '","' . $_POST['ausencia'] . '","' . $_POST['ausencia'] . '","' . $_POST['ausencia'] . '","' . $_SESSION['nombre'] . '","' . $_POST["notas"] . '")');
+            $insertar = safe_query($conn, 'INSERT INTO empleados (nombre, cod_empleado, day, proyecto, status_entrada, status_salida,justificacion, justificado_por, notas) VALUES (?,?,?,?,?,?,?,?,?)', [$_POST["nombre"], $fetch1['cod_empleado'], $fechaActual, $fetch['nombre_proyecto'], $_POST['ausencia'], $_POST['ausencia'], $_POST['ausencia'], $_SESSION['nombre'], $_POST["notas"]]);
             header("Location: ../edit_asistencia.php?proyecto=$proyecto");
         }
     }
