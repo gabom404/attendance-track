@@ -1,354 +1,63 @@
-# AttendanceTrack - Smart Attendance & Shift Control
+# AttendanceTrack
 
-<p align="center">
-  <img src="images/logo.svg" width="120" height="120" alt="AttendanceTrack Logo" />
-</p>
+Sistema web de asistencia por turnos con credenciales QR. Lo desarrollé e implementé para una empresa privada que registraba y consolidaba a mano la asistencia de su personal en distintos proyectos.
 
-<p align="center">
-  <strong>Automated QR-badge visual recognition, Monday–Sunday shift scheduling, overtime audit calculation, and multi-site project tracking.</strong>
-</p>
+*In English: a web attendance system with QR badges and weekly shifts that I built and deployed for a private company.*
 
-<p align="center">
-  <img src="https://img.shields.io/badge/PHP-8.x%20%7C%207.4-blue.svg" alt="PHP Version" />
-  <img src="https://img.shields.io/badge/Database-MySQL%20%2F%20MariaDB-orange.svg" alt="Database" />
-  <img src="https://img.shields.io/badge/UI-SB%20Admin%202%20%2F%20Bootstrap-purple.svg" alt="Bootstrap" />
-  <img src="https://img.shields.io/badge/Engine-TCPDF%20%2B%20HTML5--QRCode-green.svg" alt="Engines" />
-  <img src="https://img.shields.io/badge/License-MIT-brightgreen.svg" alt="License" />
-</p>
+## Cómo funciona
 
----
+**Terminal de marcaje** (raíz del proyecto)
 
-## 📋 Overview
+- La cámara lee la credencial QR del empleado, muestra su foto y registra la entrada o la salida según el horario que tiene ese día.
+- Si llega después de su hora, la entrada queda como "Tarde". En la salida calcula las horas extra cuando pasan más de 15 minutos de su horario.
 
-| Dimension | Implementation Details |
-| :--- | :--- |
-| **Situation** | Industrial field installations, solar farms, and distributed construction worksites faced persistent delays, buddy-punching, and payroll discrepancies arising from manual paper shift logs and fragmented spreadsheets across remote locations. |
-| **Task** | Architect and deliver a centralized, touchless attendance tracking and shift management web platform that operates reliably on standard mobile/tablet webcams and kiosks, accurately logs arrival/departure timings, automatically computes overtime, and generates printable QR identification credentials. |
-| **Action** | <ul><li>Implemented responsive webcam optical scanning utilizing the `html5-qrcode` library with immediate visual avatar verification.</li><li>Developed a dynamic Monday-through-Sunday shift evaluation engine enforcing 15-minute grace tolerance windows and automatic categorization (`Presente`, `Tarde`, `Completo`, `Incompleto`, `H.E NO AUTORIZADA`).</li><li>Engineered an automated PDF credential printing engine using **TCPDF** and **PHP QR Code** to produce dual-sided photo badges.</li><li>Created a headless JSON REST API (`api.php`) enabling seamless integration with external barcode terminals and mobile tablets.</li><li>Organized multi-tier role-based access control (RBAC) separating project site supervisors from executive administrators.</li></ul> |
-| **Result** | <ul><li>Attendance, shift compliance and overtime are recorded automatically at check-in/check-out.</li><li>Consolidated PDF reports replace manual timesheet consolidation.</li><li>No hardware lock-in: runs in any standard web browser with a camera.</li></ul> |
+**Panel administrativo** (`admin/`)
 
----
+- Empleados con su horario de lunes a domingo.
+- Proyectos con sus encargados y los empleados asignados a cada uno.
+- Lista de asistencia donde se pueden registrar justificaciones.
+- Credenciales QR listas para imprimir en PDF, en tamaño tarjeta.
+- Reporte de horas trabajadas y horas extra por rango de fechas, descargable para Excel.
+- Dos niveles de acceso: administrador y encargado de proyecto.
 
-## 🏛️ System Architecture
+**API** (`api.php`)
 
-AttendanceTrack is partitioned into three functional tiers:
+Recibe el código del empleado por POST (`id_code`) y responde en JSON si registró una entrada, una salida o si el turno ya estaba cerrado.
 
-```
-+-----------------------------------------------------------------------------------+
-|                                  CLIENT LAYER                                     |
-|  +------------------------+  +------------------------+  +---------------------+  |
-|  | Web Browser Kiosk / PC |  | Tablet / Mobile Scanner|  | External IoT / POS  |  |
-|  | (Camera Optical Scan)  |  | (Camera Optical Scan)  |  | (REST API Client)   |  |
-|  +-----------+------------+  +-----------+------------+  +----------+----------+  |
-+--------------|---------------------------|--------------------------|-------------+
-               |                           |                          |
-               +---------------------------+--------------------------+
-                                           |
-                                  HTTP POST / JSON
-                                           v
-+-----------------------------------------------------------------------------------+
-|                            APPLICATION LOGIC LAYER                                |
-|                                                                                   |
-|  +-------------------------+   +-----------------------+   +-------------------+  |
-|  |  Public Kiosk Frontend  |   |  REST API Controller  |   |  Admin Dashboard  |  |
-|  |  - agregar_entrada.php  |   |  - api.php            |   |  - /admin/        |  |
-|  |  - agregar_salida.php   |   |  - obtener_imagen.php |   |  - backend.php    |  |
-|  +------------+------------+   +-----------+-----------+   +---------+---------+  |
-|               |                            |                         |            |
-|               +----------------------------+-------------------------+            |
-|                                            |                                      |
-|                       +--------------------+---------------------+                |
-|                       |  Shift & Tolerance Business Rules Engine  |                |
-|                       |  - Monday-Sunday Day Schedule Lookup     |                |
-|                       |  - Grace Period Calculation (+15 min)    |                |
-|                       |  - Overtime (H.E.) Status Determination  |                |
-|                       +--------------------+---------------------+                |
-|                                            |                                      |
-|                       +--------------------+---------------------+                |
-|                       |  Document & Credential Generation Engine |                |
-|                       |  - TCPDF ID Badge Generator (qrcode.php) |                |
-|                       |  - Excel Shift Reporter (reporte_horas)  |                |
-|                       +--------------------+---------------------+                |
-+--------------------------------------------|--------------------------------------+
-                                             |
-                                    MySQLi / UTF8MB4
-                                             v
-+-----------------------------------------------------------------------------------+
-|                               PERSISTENCE LAYER                                   |
-|  +----------------+  +--------------------+  +----------------+  +-------------+  |
-|  | planilla       |  | empleados          |  | proyectos      |  | users       |  |
-|  | (Master Staff) |  | (Shift Punch Logs) |  | (Locations)    |  | (RBAC Auth) |  |
-|  +----------------+  +--------------------+  +----------------+  +-------------+  |
-+-----------------------------------------------------------------------------------+
-```
+## Tecnología
 
-### 1. Optical QR Badge Capture
-The frontend integrates `Html5QrcodeScanner` to capture video frames at 20 FPS, identifying employee badges (`EMP-xxx`) instantaneously. Upon optical lock, an asynchronous query fetches the employee's registered portrait, rendering immediate visual confirmation before logging the transaction.
+PHP con mysqli y sentencias preparadas, MySQL o MariaDB, JavaScript, html5-qrcode para leer los códigos, phpqrcode y TCPDF para las credenciales, y Bootstrap 4 con la plantilla SB Admin 2.
 
-### 2. Monday–Sunday Shift & Grace Tolerance Matrix
-Every employee profile defines individual scheduled entry and exit times across all 7 days of the week:
-- **Check-in Tolerance**: Scheduled entry $+15\text{ minutes}$ grace period.
-  - $\text{Time} \le \text{Scheduled} + 15\text{ min} \implies \mathbf{Presente}$ (On-Time)
-  - $\text{Time} > \text{Scheduled} + 15\text{ min} \implies \mathbf{Tarde}$ (Tardy)
-- **Check-out Tolerance & Overtime**:
-  - $\text{Departure} \le \text{Scheduled} + 15\text{ min} \implies \mathbf{Completo}$ / $\mathbf{Sin\ H.E.}$ (Standard Shift)
-  - Overtime between $0.0$ and $0.25\text{ hrs} \implies \mathbf{Sin\ H.E.}$ (Buffer window)
-  - Overtime $> 0.25\text{ hrs} \implies \mathbf{H.E\ NO\ AUTORIZADA}$ with precise numeric calculation.
-  - Departure before scheduled shift end $\implies \mathbf{Incompleto}$ (Early Departure)
+## Cómo correrlo
 
-### 3. Automated Credential & Report Generation
-- **TCPDF ID Badges (`qrcode.php`)**: Generates standard CR-80 format double-sided employee identity cards ($54\text{mm} \times 85\text{mm}$) containing company branding, employee photograph, name, position, and machine-readable QR barcode.
-- **Excel Audit Reports (`reporte_horas.php`)**: Dynamically aggregates shift blocks, cumulative hours, entry/exit stamps, justifications, and supervisor notes formatted with alternating chromatic grouping for payroll auditing.
-
----
-
-## 🗄️ Database Schema & Entity Relationships
-
-The relational architecture is optimized for rapid employee lookups, project staffing assignments, and multi-site shift reporting:
-
-```mermaid
-erDiagram
-    planilla ||--o{ empleados_proyectos : "assigned to"
-    proyectos ||--o{ empleados_proyectos : "staffed by"
-    planilla ||--o{ empleados : "punches shifts"
-    users ||--o{ proyectos : "supervises"
-
-    planilla {
-        int id PK
-        varchar cod_empleado UK
-        varchar nombre
-        time lunes_entrada
-        time lunes_salida
-        time martes_entrada
-        time martes_salida
-        time miercoles_entrada
-        time miercoles_salida
-        time jueves_entrada
-        time jueves_salida
-        time viernes_entrada
-        time viernes_salida
-        time sabado_entrada
-        time sabado_salida
-        time domingo_entrada
-        time domingo_salida
-        enum status
-        varchar rol
-        enum tipo
-        varchar tel
-        varchar dui
-        varchar img_empleado
-    }
-
-    proyectos {
-        int id PK
-        varchar nombre_proyecto
-        int id_encargado
-        varchar nombre_encargado
-        int id_encargado2
-        varchar nombre_encargado2
-        int id_encargado3
-        varchar nombre_encargado3
-        int id_encargado4
-        varchar nombre_encargado4
-    }
-
-    empleados_proyectos {
-        int id PK
-        varchar nombre_empleado
-        varchar nombre_proyecto
-        varchar cod_empleado FK
-        date date
-        varchar img
-    }
-
-    empleados {
-        int id PK
-        varchar nombre
-        varchar cod_empleado FK
-        date day
-        varchar proyecto
-        time entrada
-        time salida
-        varchar status_entrada
-        varchar status_salida
-        varchar status_horas
-        float horas_extra
-        varchar justificacion
-        varchar justificado_por
-        varchar notas
-    }
-
-    users {
-        int id PK
-        varchar nombre_empleado
-        varchar user_email
-        varchar password
-        varchar salt
-        int nivel
-    }
-```
-
----
-
-## 📡 REST API Reference
-
-AttendanceTrack includes a headless JSON endpoint (`api.php`) for programmatic check-in/out via mobile apps, hardware terminals, or third-party HR systems.
-
-### Endpoint: `POST /api.php`
-
-#### Request Parameters (Form-Data / x-www-form-urlencoded):
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `id_code` | `string` | **Yes** | Employee unique identification code (e.g., `EMP-001`). |
-| `fecha` | `string` | Optional | ISO datetime string (`Y-m-d H:i:s`). Defaults to server timestamp. |
-
-#### Sample Request (`curl`):
-```bash
-curl -X POST "http://localhost/api.php" \
-  -d "id_code=EMP-001"
-```
-
-#### Response 1: Shift Check-In (Entrada)
-```json
-{
-  "status": "success",
-  "action": "check_in",
-  "message": "Check-in logged successfully.",
-  "data": {
-    "employee": "Alice Smith",
-    "cod_empleado": "EMP-001",
-    "day": "2024-05-20",
-    "entrada": "06:58:12",
-    "status_entrada": "Presente",
-    "proyecto": "Solar Plant Alpha - North Facility"
-  }
-}
-```
-
-#### Response 2: Shift Check-Out (Salida)
-```json
-{
-  "status": "success",
-  "action": "check_out",
-  "message": "Check-out logged successfully.",
-  "data": {
-    "employee": "Alice Smith",
-    "cod_empleado": "EMP-001",
-    "day": "2024-05-20",
-    "salida": "17:05:40",
-    "status_salida": "Completo",
-    "status_horas": "Sin H.E",
-    "horas_extra": 0
-  }
-}
-```
-
-#### Response 3: Shift Already Finalized
-```json
-{
-  "status": "info",
-  "action": "already_recorded",
-  "message": "Shift attendance already finalized for today.",
-  "data": {
-    "employee": "Alice Smith",
-    "cod_empleado": "EMP-001",
-    "day": "2024-05-20",
-    "entrada": "06:58:12",
-    "salida": "17:05:40",
-    "status_entrada": "Presente",
-    "status_salida": "Completo"
-  }
-}
-```
-
-#### Response 4: Employee Inactive or Not Found
-```json
-{
-  "status": "error",
-  "message": "Employee with code 'INVALID-001' not found or is inactive."
-}
-```
-
----
-
-## 🚀 Installation & Setup
-
-### 1. Prerequisites
-- **Web Server**: Apache 2.4+ / Nginx (XAMPP, WampServer, or native LAMP stack)
-- **PHP**: Version 7.4 or 8.x with extensions:
-  - `mysqli`
-  - `gd` (required for QR code rasterization)
-  - `mbstring`
-- **Database**: MySQL 5.7+ or MariaDB 10.3+
-
-### 2. Database Initialization
-Import the DDL schema and the synthetic seed dataset into your MySQL instance:
+Requisitos: PHP 7.4 u 8 con las extensiones `mysqli` y `gd`, y MySQL o MariaDB.
 
 ```bash
-# Connect to MySQL and import schema
 mysql -u root -p < database/schema.sql
-
-# Import synthetic demo employees, projects, and users
-mysql -u root -p attendancetrack_db < database/seeds.sql
-```
-
-### 3. Application Configuration
-Copy the configuration template and adjust credentials:
-
-```bash
-cp config.example.php config.php
-```
-
-Edit `config.php` (or define environment variables):
-```php
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'attendancetrack_db');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_CHARSET', 'utf8mb4');
-define('AUTH_SALT', 'attendancetrack_salt');
-define('ADMIN_SECURITY_KEY', 'set-a-long-random-value'); // empty disables the admin override
-```
-
-> **Safe Defaults**: If `config.php` is omitted, the system automatically falls back to environment variables (`getenv('DB_HOST')`, etc.) or local defaults (`localhost`, `attendancetrack_db`, `root`, `""`).
-
-### 4. Running the Application
-Launch with PHP's built-in server for rapid testing:
-```bash
+mysql -u root -p < database/seeds.sql
+cp config.example.php config.php   # también se puede configurar con variables de entorno
 php -S localhost:8000
 ```
-Then navigate to:
-- **Kiosk Scanner Portal**: `http://localhost:8000/index.php`
-- **Check-in Camera**: `http://localhost:8000/agregar_entrada.php`
-- **Check-out Camera**: `http://localhost:8000/agregar_salida.php`
-- **Admin Dashboard**: `http://localhost:8000/admin/`
 
----
+- Terminal de marcaje: http://localhost:8000/
+- Panel administrativo: http://localhost:8000/admin/
 
-## 👥 Demo Credentials & Seed Profiles
+La base de datos real no está en el repositorio. `seeds.sql` trae datos ficticios:
 
-| Role | Username | Password | Access Level | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| **Global Admin** | `Admin User` | `Admin2024!` | Level 2 | Complete administrative control |
-| **Site Admin** | `Alice Smith` | `password123` | Level 2 | Lead Project Engineer |
-| **Site Supervisor** | `Bob Johnson` | `password123` | Level 1 | Field Supervisor |
+| Usuario | Contraseña | Nivel |
+|---|---|---|
+| Admin User | `Admin2024!` | Administrador |
+| Alice Smith | `password123` | Administrador |
+| Bob Johnson | `password123` | Encargado |
 
-### Synthetic Demo Employees:
-- `EMP-001` - **Alice Smith** (Lead Project Engineer - Solar Plant Alpha)
-- `EMP-002` - **Bob Johnson** (Electrical Specialist - Substation Expansion)
-- `EMP-003` - **Charlie Brown** (Field Operations Assistant - Solar Plant Alpha)
+Para probar la terminal se pueden generar las credenciales de los empleados `EMP-001`, `EMP-002` y `EMP-003` desde el panel.
 
----
+## Pendientes
 
-## 🔒 Security & Privacy Notice
-This repository has been fully sanitized:
-- **PII Stripping**: All real employee names, photos, government IDs, and medical documents have been removed.
-- **SQL Sanitization**: Production dumps (`dipaldes_*`) have been excluded in favor of clean relational DDL (`schema.sql`) and synthetic demo data (`seeds.sql`).
-- **Brand Cleansing**: All code and visual assets are rebranded to **AttendanceTrack**.
-- **Parameterized Queries**: Every database query that receives external input runs through mysqli prepared statements (`safe_query()` in `includes/db_connect.php`).
-- **No Hardcoded Master Keys**: The admin password override only works when `ADMIN_SECURITY_KEY` is configured.
+- No tiene pruebas automatizadas.
+- El reporte de horas se descarga como una tabla con extensión `.xls`, no como un archivo nativo de Excel.
+- Cada empleado tiene un horario fijo por día de la semana; no maneja turnos rotativos.
 
----
+## Licencia
 
-## 📄 License
-This project is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)
